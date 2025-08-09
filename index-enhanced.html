@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="Shoe Point - Premium athletic footwear for peak performance. Shop running shoes, basketball shoes, hiking boots and more.">
+    <meta name="keywords"
+        content="athletic shoes, running shoes, basketball shoes, hiking boots, soccer cleats, sports footwear">
+    <title>Shoe Point - Step Up Your Game</title>
+    <link rel="stylesheet" href="styles-enhanced.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,wght@0,400;0,600;0,900;1,400;1,600&display=swap"
+        rel="stylesheet">
+    
+    <!-- PayPal SDK -->
+    <script src="https://www.paypal.com/sdk/js?client-id=AZDxjDScFpQtjWTOUtWKbyN_bDt4OgqaF4eYXlewfBP4-8aqX3PiV8e1GWU6liB2CUXlkA59kJXE7M6R&currency=USD&disable-funding=credit,card"></script>
+    
+    <!-- Stripe SDK -->
+    <script src="https://js.stripe.com/v3/"></script>
+</head>
+
+<body>
+    <!-- Location Ticker -->
+    <div class="location-ticker" aria-label="Store location">
+        <div class="ticker-content">
+            <span class="location-item">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" class="location-icon">
+                    <path
+                        d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                </svg>
+                📍 Our Location: Chella Chock Muzaffarabad AJK
+            </span>
+            <span class="location-item">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" class="location-icon">
+                    <path
+                        d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                </svg>
+                📍 Visit Us: Chella Chock Muzaffarabad AJK
+            </span>
+            <span class="location-item">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" class="location-icon">
+                    <path
+                        d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                </svg>
+                📍 Store Address: Chella Chock Muzaffarabad AJK
+            </span>
+        </div>
+    </div>
+
+    <!-- Hero Section -->
+    <header class="hero-section" role="banner">
+        <div class="hero-content">
+            <div class="hero-text">
+                <h1 class="hero-title">STEP UP YOUR GAME</h1>
+                <p class="hero-description">Be unstoppable with our cutting-edge sport shoes, optimized for maximum
+                    performance</p>
+                <div class="hero-buttons">
+                    <button class="btn btn-primary" aria-label="Shop now for athletic shoes">SHOP NOW</button>
+                    <button class="btn btn-secondary" aria-label="Save 50% on selected items">SAVE 50%!</button>
+                </div>
+            </div>
+            <div class="hero-images" aria-hidden="true">
+                <img class="hero-image hero-image-1" src="fron p_1.webp" alt="Athletic shoe product 1" width="200"
+                    height="200" loading="eager">
+                <img class="hero-image hero-image-2" src="fron p_2.webp" alt="Athletic shoe product 2" width="200"
+                    height="200" loading="eager">
+                <img class="hero-image hero-image-3" src="fron p_3 webp.webp" alt="Athletic shoe product 3" width="200"
+                    height="200" loading="eager">
+                <img class="hero-image hero-image-4" src="fron p_4.webp" alt="Athletic shoe product 4" width="200"
+                    height="200" loading="eager">
+            </div>
+        </div>
+    </header>
+
+    <!-- Features Section -->
+    <section class="features-section" aria-labelledby="features-title">
+        <h2 id="features-title" class="sr-only">Our Features</h2>
+        <div class="features-container">
+            <div class="feature-card">
+                <img src="free-shipping-delivery.png" alt="Free shipping icon" class="feature-icon" width="100"
+                    height="100">
+                <h3 class="feature-title">Fast, Free Shipping</h3>
+                <p class="feature-description">We're offering free shipping on all orders that meet our minimum
+                    threshold or are Rs.15000+. Shop now to save!</p>
+            </div>
+            <div class="feature-card">
+                <img src="return.png" alt="Returns icon" class="feature-icon" width="100" height="100">
+                <h3 class="feature-title">Worry-Free Returns</h3>
+                <p class="feature-description">If you're not completely satisfied with your order, we offer free returns
+                    or exchanges for any reason within 30 days.</p>
+            </div>
+            <div class="feature-card">
+                <img src="gift icon.webp" alt="Gift card icon" class="feature-icon" width="100" height="100">
+                <h3 class="feature-title">Gift Cards</h3>
+                <p class="feature-description">Looking for the perfect gift? Our Shoe Point Gift Card lets them choose
+                    their own perfect sport shoes.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Product Showcase Section -->
+    <section class="showcase-section" aria-labelledby="showcase-title">
+        <div class="showcase-container">
+            <!-- Bestseller Panel (35% width) -->
+            <div class="bestseller-panel">
+                <div class="bestseller-background">
+                    <div class="bestseller-text-pattern" aria-hidden="true">
+                        <span>BEST SELLER</span>
+                        <span>BEST SELLER</span>
+                        <span>BEST SELLER</span>
+                        <span>BEST SELLER</span>
+                        <span>BEST SELLER</span>
+                        <span>BEST SELLER</span>
+                    </div>
+                    <div class="bestseller-content">
+                        <img src="sl1.webp" alt="Air Jordan 5 Retro - Best Selling Athletic Shoe"
+                            class="bestseller-image" width="500" height="500" loading="lazy">
+                        <div class="bestseller-overlay">
+                            <span class="bestseller-badge">BEST SELLER</span>
+                        </div>
+                        <button class="bestseller-add-btn btn btn-primary" data-product="Air Jordan 5 Retro"
+                            data-price="9999" data-image="sl1.webp" aria-label="Add Air Jordan 5 Retro to cart">
+                            ADD TO CART - Rs.9999
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Collection Panel (65% width) -->
+            <div class="collection-panel">
+                <div class="collection-content">
+                    <header class="collection-header">
+                        <h2 id="showcase-title" class="collection-title">INTRODUCING DYNAMIC COLLECTION</h2>
+                        <p class="collection-description">
+                            Gamechangers on the basketball and tennis courts then. Timelessly authentic classic shoes
+                            now. Iconic since day one.
+                        </p>
+                    </header>
+
+                    <div class="product-gallery" role="region" aria-label="Product gallery">
+                        <div class="gallery-container">
+                            <div class="gallery-images">
+                                <div class="gallery-slide active" data-slide="0">
+                                    <img src="sls2.avif" alt="Red canvas sneaker detail view" class="gallery-image"
+                                        width="400" height="300" loading="lazy">
+                                    <div class="gallery-badge">Promo Purchase</div>
+                                </div>
+                                <div class="gallery-slide" data-slide="1">
+                                    <img src="sls3.avif" alt="Person wearing red sneakers outdoors"
+                                        class="gallery-image" width="400" height="300" loading="lazy">
+                                    <div class="gallery-badge">Promo Purchase</div>
+                                </div>
+                                <div class="gallery-slide" data-slide="2">
+                                    <img src="sls4.jpg" alt="Classic white sneakers lifestyle shot"
+                                        class="gallery-image" width="400" height="300" loading="lazy">
+                                    <div class="gallery-badge">New Arrival</div>
+                                </div>
+                            </div>
+
+                            <!-- Gallery Navigation Dots -->
+                            <div class="gallery-navigation" role="tablist" aria-label="Gallery navigation">
+                                <button class="gallery-dot active" data-slide="0" role="tab" aria-selected="true"
+                                    aria-label="View first product image"></button>
+                                <button class="gallery-dot" data-slide="1" role="tab" aria-selected="false"
+                                    aria-label="View second product image"></button>
+                                <button class="gallery-dot" data-slide="2" role="tab" aria-selected="false"
+                                    aria-label="View third product image"></button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="collection-actions">
+                        <button class="btn btn-primary learn-more-btn" id="learn-more-collection">
+                            LEARN MORE
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Products Section -->
+    <section class="products-section" aria-labelledby="products-title"></section>
+    <h2 id="products-title" class="section-title">Featuring the Best</h2>
+
+    <div class="products-grid">
+        <article class="product-card">
+            <div class="product-badge">48% OFF</div>
+            <img src="card 1.webp" alt="Hiking Shoes for Adventurers" class="product-image" width="350" height="300"
+                loading="lazy">
+            <div class="product-rating" aria-label="5 star rating with 1,472 reviews">
+                <span class="star" aria-hidden="true">★</span>5.0 (+1,472 Reviews)
+            </div>
+            <h3 class="product-title">Hiking Shoes for Adventurers</h3>
+            <p class="product-price" aria-label="Price: Rs.5500">Rs.5500</p>
+            <button class="btn btn-cart" data-product="Hiking Shoes for Adventurers" data-price="5500" data-image="card 1.webp">ADD TO
+                CART</button>
+        </article>
+
+        <article class="product-card">
+            <div class="product-badge">48% OFF</div>
+            <img src="card 2.webp" alt="High-Top Basketball Shoes" class="product-image" width="350" height="300"
+                loading="lazy">
+            <div class="product-rating" aria-label="5 star rating with 1,472 reviews">
+                <span class="star" aria-hidden="true">★</span>5.0 (+1,472 Reviews)
+            </div>
+            <h3 class="product-title">High-Top Basketball Shoes</h3>
+            <p class="product-price" aria-label="Price: Rs.4000">Rs.4000</p>
+            <button class="btn btn-cart" data-product="High-Top Basketball Shoes" data-price="4000" data-image="card 2.webp">ADD TO
+                CART</button>
+        </article>
+
+        <article class="product-card">
+            <div class="product-badge">48% OFF</div>
+            <img src="card 3.webp" alt="High-Top Basketball Shoes" class="product-image" width="350" height="300"
+                loading="lazy">
+            <div class="product-rating" aria-label="5 star rating with 1,472 reviews">
+                <span class="star" aria-hidden="true">★</span>5.0 (+1,472 Reviews)
+            </div>
+            <h3 class="product-title">High-Top Basketball Shoes</h3>
+            <p class="product-price" aria-label="Price: Rs.3500">Rs.3500</p>
+            <button class="btn btn-cart" data-product="High-Top Basketball Shoes" data-price="3500" data-image="card 3.webp">ADD TO
+                CART</button>
+        </article>
+
+        <article class="product-card">
+            <div class="product-badge">48% OFF</div>
+            <img src="card 4.webp" alt="Soccer Cleats for Speed" class="product-image" width="350" height="300"
+                loading="lazy">
+            <div class="product-rating" aria-label="5 star rating with 1,472 reviews">
+                <span class="star" aria-hidden="true">★</span>5.0 (+1,472 Reviews)
+            </div>
+            <h3 class="product-title">Soccer Cleats for Speed</h3>
+            <p class="product-price" aria-label="Price: Rs.2850">Rs.2850</p>
+            <button class="btn btn-cart" data-product="Soccer Cleats for Speed" data-price="2850" data-image="card 4.webp">ADD TO CART</button>
+        </article>
+
+        <article class="product-card">
+            <div class="product-badge">48% OFF</div>
+            <img src="card 5.webp" alt="High-Top Basketball Shoes" class="product-image" width="350" height="300"
+                loading="lazy">
+            <div class="product-rating" aria-label="5 star rating with 1,472 reviews">
+                <span class="star" aria-hidden="true">★</span>5.0 (+1,472 Reviews)
+            </div>
+            <h3 class="product-title">High-Top Basketball Shoes</h3>
+            <p class="product-price" aria-label="Price: Rs.2900">Rs.2900</p>
+            <button class="btn btn-cart" data-product="High-Top Basketball Shoes" data-price="2900" data-image="card 5.webp">ADD TO
+                CART</button>
+        </article>
+
+        <article class="product-card">
+            <div class="product-badge">48% OFF</div>
+            <img src="card 6.webp" alt="Lightweight Running Shoes" class="product-image" width="350" height="300"
+                loading="lazy">
+            <div class="product-rating" aria-label="5 star rating with 1,472 reviews">
+                <span class="star" aria-hidden="true">★</span>5.0 (+1,472 Reviews)
+            </div>
+            <h3 class="product-title">Lightweight Running Shoes</h3>
+            <p class="product-price" aria-label="Price: Rs.3000">Rs.3000</p>
+            <button class="btn btn-cart" data-product="Lightweight Running Shoes" data-price="3000" data-image="card 6.webp">ADD TO
+                CART</button>
+        </article>
+    </div>
+
+    <div class="view-more">
+        <button class="btn btn-link" id="view-more-btn">FIND MORE →</button>
+    </div>
+    </section>
+
+    <!-- Promotional Section -->
+    <section class="promo-section" aria-labelledby="promo-title">
+        <div class="promo-background">
+            <img src="shope now.webp" alt="Summer collection background" class="promo-bg-image" width="1530"
+                height="620">
+            <div class="promo-content">
+                <div class="promo-text">
+                    <h2 id="promo-title" class="promo-header">LIMITED TIME OFFER</h2>
+                    <h3 class="promo-title">DISCOVER SUMMER COLLECTION</h3>
+                    <p class="promo-subtitle"><strong>GET 10% OFF</strong> your purchase of summer sport shoes.</p>
+                    <p class="promo-countdown-label">OFFER ENDS IN:</p>
+                </div>
+                <div class="countdown-timer" aria-live="polite" aria-label="Countdown timer">
+                    <div class="time-block">
+                        <span id="days" class="time-value">48</span>
+                        <p class="time-label">Days</p>
+                    </div>
+                    <div class="time-block">
+                        <span id="hours" class="time-value">00</span>
+                        <p class="time-label">Hours</p>
+                    </div>
+                    <div class="time-block">
+                        <span id="minutes" class="time-value">00</span>
+                        <p class="time-label">Mins</p>
+                    </div>
+                </div>
+                <button class="btn btn-primary promo-btn">SHOP NOW</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Categories Section -->
+    <section class="categories-section" aria-labelledby="categories-title">
+        <h2 id="categories-title" class="section-title">SHOP BY CATEGORY</h2>
+        <p class="section-description">Explore our curated collection of high-quality sport shoes, designed for every
+            activity and style, and find the perfect pair to help you step up your game</p>
+    </section>
+
+    <!-- Category Cards Showcase -->
+    <section class="category-showcase" aria-labelledby="category-showcase-title">
+        <h2 id="category-showcase-title" class="sr-only">Sport Categories</h2>
+        <div class="category-cards-grid">
+            <article class="category-card" data-category="running" role="button" tabindex="0"
+                aria-label="Explore running shoes collection">
+                <img src="sc1.webp" alt="Red running shoes for athletic performance" class="category-image" width="300"
+                    height="400" loading="lazy">
+                <div class="category-overlay">
+                    <h3 class="category-title">RUNNING</h3>
+                    <button class="btn btn-discover" data-category="running"
+                        aria-label="Discover running shoes">DISCOVER NOW</button>
+                </div>
+            </article>
+
+            <article class="category-card" data-category="basketball" role="button" tabindex="0"
+                aria-label="Explore basketball shoes collection">
+                <img src="sc2.webp" alt="High-top basketball shoes with Nike swoosh" class="category-image" width="300"
+                    height="400" loading="lazy">
+                <div class="category-overlay">
+                    <h3 class="category-title">BASKETBALL</h3>
+                    <button class="btn btn-discover" data-category="basketball"
+                        aria-label="Discover basketball shoes">DISCOVER NOW</button>
+                </div>
+            </article>
+
+            <article class="category-card" data-category="soccer" role="button" tabindex="0"
+                aria-label="Explore soccer cleats collection">
+                <img src="sc3.webp" alt="White soccer cleats for field performance" class="category-image" width="300"
+                    height="400" loading="lazy">
+                <div class="category-overlay">
+                    <h3 class="category-title">SOCCER</h3>
+                    <button class="btn btn-discover" data-category="soccer" aria-label="Discover soccer cleats">DISCOVER
+                        NOW</button>
+                </div>
+            </article>
+
+            <article class="category-card" data-category="tennis" role="button" tabindex="0"
+                aria-label="Explore tennis shoes collection">
+                <img src="sc4.webp" alt="White tennis shoes with red accents" class="category-image" width="300"
+                    height="400" loading="lazy">
+                <div class="category-overlay">
+                    <h3 class="category-title">TENNIS</h3>
+                    <button class="btn btn-discover" data-category="tennis" aria-label="Discover tennis shoes">DISCOVER
+                        NOW</button>
+                </div>
+            </article>
+        </div>
+    </section>
+
+    <!-- Mission Section -->
+    <section class="mission-section" aria-labelledby="mission-title">
+        <div class="mission-container">
+            <!-- Mission Content (35% width) -->
+            <div class="mission-content">
+                <h2 id="mission-title" class="mission-title">OUR MISSION</h2>
+                <p class="mission-description">
+                    We offer a wide selection of high-quality and affordable sport shoes. Our
+                    mission is to provide our customers with a seamless shopping experience and
+                    prioritize sustainability and ethical practices in our business.
+                </p>
+                <button class="btn btn-primary mission-btn" id="discover-more-btn">
+                    DISCOVER MORE
+                </button>
+            </div>
+
+            <!-- Mission Image (65% width) -->
+            <div class="mission-image-container">
+                <img src="pi.webp" alt="Group of people exercising together outdoors" class="mission-image" width="800"
+                    height="500" loading="lazy">
+            </div>
+        </div>
+    </section>
+
+    <!-- Customer Testimonials Section -->
+    <section class="testimonials-section" aria-labelledby="testimonials-title">
+        <div class="testimonials-container">
+            <h2 id="testimonials-title" class="testimonials-title">WHAT OUR CUSTOMERS SAY</h2>
+
+            <div class="testimonials-carousel" role="region" aria-label="Customer testimonials">
+                <div class="testimonials-track">
+                    <!-- Testimonial Card 1 -->
+                    <div class="testimonial-card active" data-slide="0">
+                        <div class="testimonial-image-container">
+                            <img src="i1.webp" alt="Karen Kim customer photo" class="testimonial-image" width="300"
+                                height="300" loading="lazy">
+                        </div>
+                        <div class="testimonial-content">
+                            <div class="customer-info">
+                                <img src="sh1.webp" alt="Purchased shoe" class="purchased-shoe" width="50" height="50">
+                                <div class="customer-details">
+                                    <h3 class="customer-name">Karen Kim</h3>
+                                    <div class="customer-rating" aria-label="5 star rating">
+                                        <span class="star">★</span>
+                                        <span class="star">★</span>
+                                        <span class="star">★</span>
+                                        <span class="star">★</span>
+                                        <span class="star">★</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <p class="testimonial-text">
+                                This online store has become my go-to for sport shoes. Excellent products and top-notch
+                                customer service.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Testimonial Card 2 -->
+                    <div class="testimonial-card" data-slide="1">
+                        <div class="testimonial-image-container">
+                            <img src="i2.webp" alt="Alexander M customer photo" class="testimonial-image" width="300"
+                                height="300" loading="lazy">
+                        </div>
+                        <div class="testimonial-content">
+                            <div class="customer-info">
+                                <img src="sh2.webp" alt="Purchased shoe" class="purchased-shoe" width="50" height="50">
+                                <div class="customer-details">
+                                    <h3 class="customer-name">Alexander M.</h3>
+                                    <div class="customer-rating" aria-label="5 star rating">
+                                        <span class="star">★</span>
+                                        <span class="star">★</span>
+                                        <span class="star">★</span>
+                                        <span class="star">★</span>
+                                        <span class="star">★</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <p class="testimonial-text">
+                                The staff at this online store were very helpful and they recommended a pair of shoes
+                                that were perfect for me.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Testimonial Card 3 -->
+                    <div class="testimonial-card" data-slide="2">
+                        <div class="testimonial-image-container">
+                            <img src="i3.webp" alt="Selena Brown customer photo" class="testimonial-image" width="300"
+                                height="300" loading="lazy">
+                        </div>
+                        <div class="testimonial-content">
+                            <div class="customer-info">
+                                <img src="sh3.webp" alt="Purchased shoe" class="purchased-shoe" width="50" height="50">
+                                <div class="customer-details">
+                                    <h3 class="customer-name">Selena Brown</h3>
+                                    <div class="customer-rating" aria-label="5 star rating">
+                                        <span class="star">★</span>
+                                        <span class="star">★</span>
+                                        <span class="star">★</span>
+                                        <span class="star">★</span>
+                                        <span class="star">★</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <p class="testimonial-text">
+                                Love the quality and selection of sport shoes at this online store. Fast shipping and
+                                great customer service too.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Testimonial Card 4 -->
+                    <div class="testimonial-card" data-slide="3">
+                        <div class="testimonial-image-container">
+                            <img src="i4.webp" alt="Michael Johnson customer photo" class="testimonial-image"
+                                width="300" height="300" loading="lazy">
+                        </div>
+                        <div class="testimonial-content">
+                            <div class="customer-info">
+                                <img src="sh4.webp" alt="Purchased shoe" class="purchased-shoe" width="50" height="50">
+                                <div class="customer-details">
+                                    <h3 class="customer-name">Michael Johnson</h3>
+                                    <div class="customer-rating" aria-label="5 star rating">
+                                        <span class="star">★</span>
+                                        <span class="star">★</span>
+                                        <span class="star">★</span>
+                                        <span class="star">★</span>
+                                        <span class="star">★</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <p class="testimonial-text">
+                                Amazing variety of athletic shoes! Found exactly what I needed for my training. Highly
+                                recommend this store.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Testimonial Card 5 -->
+                    <div class="testimonial-card" data-slide="4">
+                        <div class="testimonial-image-container">
+                            <img src="i5.webp" alt="Emma Davis customer photo" class="testimonial-image" width="300"
+                                height="300" loading="lazy">
+                        </div>
+                        <div class="testimonial-content">
+                            <div class="customer-info">
+                                <img src="sh5.webp" alt="Purchased shoe" class="purchased-shoe" width="50" height="50">
+                                <div class="customer-details">
+                                    <h3 class="customer-name">Emma Davis</h3>
+                                    <div class="customer-rating" aria-label="5 star rating">
+                                        <span class="star">★</span>
+                                        <span class="star">★</span>
+                                        <span class="star">★</span>
+                                        <span class="star">★</span>
+                                        <span class="star">★</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <p class="testimonial-text">
+                                Outstanding customer service and premium quality shoes. The delivery was super fast and
+                                packaging was excellent.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Testimonial Card 6 -->
+                    <div class="testimonial-card" data-slide="5">
+                        <div class="testimonial-image-container">
+                            <img src="i6.webp" alt="David Wilson customer photo" class="testimonial-image" width="300"
+                                height="300" loading="lazy">
+                        </div>
+                        <div class="testimonial-content">
+                            <div class="customer-info">
+                                <img src="sh6.webp" alt="Purchased shoe" class="purchased-shoe" width="50" height="50">
+                                <div class="customer-details">
+                                    <h3 class="customer-name">David Wilson</h3>
+                                    <div class="customer-rating" aria-label="5 star rating">
+                                        <span class="star">★</span>
+                                        <span class="star">★</span>
+                                        <span class="star">★</span>
+                                        <span class="star">★</span>
+                                        <span class="star">★</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <p class="testimonial-text">
+                                Best online shoe store I've ever used! Great prices, authentic products, and excellent
+                                customer support team.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Navigation Dots -->
+                <div class="testimonials-navigation" role="tablist" aria-label="Testimonials navigation">
+                    <button class="testimonial-dot active" data-slide="0" role="tab" aria-selected="true"
+                        aria-label="View first group of testimonials"></button>
+                    <button class="testimonial-dot" data-slide="1" role="tab" aria-selected="false"
+                        aria-label="View second group of testimonials"></button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+    <!-- Cart Summary (will be dynamically inserted) -->
+    <div id="cart-summary" class="cart-summary" aria-live="polite" style="display: none;"></div>
+
+    <!-- Payment Modal (will be dynamically inserted) -->
+    <div id="payment-modal" class="modal" style="display: none;" role="dialog" aria-labelledby="payment-title"
+        aria-hidden="true">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="payment-title">Payment Details</h3>
+                <button class="modal-close" aria-label="Close payment form">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Payment form will be inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Chatbot Widget -->
+    <div id="chatbot-widget" class="chatbot-widget" aria-label="Customer support chatbot">
+        <!-- Chat Toggle Button -->
+        <button id="chat-toggle" class="chat-toggle" aria-label="Open customer support chat">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path
+                    d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2ZM20 16H5.17L4 17.17V4H20V16Z"
+                    fill="currentColor" />
+                <path d="M7 9H17V11H7V9ZM7 12H15V14H7V12Z" fill="currentColor" />
+            </svg>
+        </button>
+
+        <!-- Chat Window -->
+        <div id="chat-window" class="chat-window" style="display: none;">
+            <div class="chat-header">
+                <div class="chat-header-info">
+                    <div class="chat-avatar">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path
+                                d="M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2ZM21 9V7L15 1H5C3.89 1 3 1.89 3 3V21C3 22.11 3.89 23 5 23H19C20.11 23 21 22.11 21 21V9Z"
+                                fill="currentColor" />
+                        </svg>
+                    </div>
+                    <div class="chat-info">
+                        <h4>Shoe Point Assistant</h4>
+                        <span class="chat-status">Online</span>
+                    </div>
+                </div>
+                <button id="chat-close" class="chat-close" aria-label="Close chat">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path
+                            d="M19 6.41L17.59 5L12 10.59L6.41 5L5 6.41L10.59 12L5 17.59L6.41 19L12 13.41L17.59 19L19 17.59L13.41 12L19 6.41Z"
+                            fill="currentColor" />
+                    </svg>
+                </button>
+            </div>
+
+            <div id="chat-messages" class="chat-messages">
+                <div class="message bot-message">
+                    <div class="message-content">
+                        <p>Hi! I'm your Shoe Point assistant. How can I help you today?</p>
+                        <div class="quick-actions">
+                            <button class="quick-action" data-action="products">View Products</button>
+                            <button class="quick-action" data-action="shipping">Shipping Info</button>
+                            <button class="quick-action" data-action="returns">Returns Policy</button>
+                            <button class="quick-action" data-action="human">Talk to Human</button>
+                        </div>
+                    </div>
+                    <span class="message-time">Just now</span>
+                </div>
+            </div>
+
+            <div class="chat-input-container">
+                <form id="chat-form" class="chat-form">
+                    <input type="text" id="chat-input" class="chat-input" placeholder="Type your message..."
+                        autocomplete="off" aria-label="Type your message">
+                    <button type="submit" class="chat-send" aria-label="Send message">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M2.01 21L23 12L2.01 3L2 10L17 12L2 14L2.01 21Z" fill="currentColor" />
+                        </svg>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer" role="contentinfo">
+        <div class="footer-container">
+            <div class="footer-content">
+                <!-- Company Info -->
+                <div class="footer-section">
+                    <h3 class="footer-title">Shoe Point</h3>
+                    <p class="footer-description">Step up your game with our cutting-edge sport shoes, optimized for maximum performance. Your trusted partner for athletic excellence.</p>
+                    <div class="footer-location">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" class="location-icon">
+                            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                        </svg>
+                        <span>Chella Chock Muzaffarabad AJK</span>
+                    </div>
+                </div>
+
+                <!-- Shop Categories -->
+                <div class="footer-section">
+                    <h4 class="footer-heading">Shop Categories</h4>
+                    <ul class="footer-links">
+                        <li><a href="#running" class="footer-link">Running Shoes</a></li>
+                        <li><a href="#basketball" class="footer-link">Basketball Shoes</a></li>
+                        <li><a href="#soccer" class="footer-link">Soccer Cleats</a></li>
+                        <li><a href="#tennis" class="footer-link">Tennis Shoes</a></li>
+                        <li><a href="#hiking" class="footer-link">Hiking Shoes</a></li>
+                        <li><a href="#products" class="footer-link">All Products</a></li>
+                    </ul>
+                </div>
+
+                <!-- Customer Service -->
+                <div class="footer-section">
+                    <h4 class="footer-heading">Customer Service</h4>
+                    <ul class="footer-links">
+                        <li><a href="#shipping" class="footer-link">Free Shipping</a></li>
+                        <li><a href="#returns" class="footer-link">Returns & Exchanges</a></li>
+                        <li><a href="#gift-cards" class="footer-link">Gift Cards</a></li>
+                        <li><a href="#size-guide" class="footer-link">Size Guide</a></li>
+                        <li><a href="#support" class="footer-link">Customer Support</a></li>
+                        <li><a href="#track-order" class="footer-link">Track Your Order</a></li>
+                    </ul>
+                </div>
+
+                <!-- Company -->
+                <div class="footer-section">
+                    <h4 class="footer-heading">Company</h4>
+                    <ul class="footer-links">
+                        <li><a href="#mission" class="footer-link">Our Mission</a></li>
+                        <li><a href="#about" class="footer-link">About Us</a></li>
+                        <li><a href="#testimonials" class="footer-link">Customer Reviews</a></li>
+                        <li><a href="#careers" class="footer-link">Careers</a></li>
+                        <li><a href="#sustainability" class="footer-link">Sustainability</a></li>
+                        <li><a href="#contact" class="footer-link">Contact Us</a></li>
+                    </ul>
+                </div>
+
+                <!-- Connect -->
+                <div class="footer-section">
+                    <h4 class="footer-heading">Connect With Us</h4>
+                    <ul class="footer-links">
+                        <li><a href="#newsletter" class="footer-link">Newsletter</a></li>
+                        <li><a href="#facebook" class="footer-link">Facebook</a></li>
+                        <li><a href="#instagram" class="footer-link">Instagram</a></li>
+                        <li><a href="#twitter" class="footer-link">Twitter</a></li>
+                        <li><a href="#youtube" class="footer-link">YouTube</a></li>
+                        <li><a href="#chat" class="footer-link">Live Chat</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Footer Bottom -->
+            <div class="footer-bottom">
+                <div class="footer-bottom-content">
+                    <div class="footer-legal">
+                        <p>&copy; 2024 Shoe Point. All rights reserved.</p>
+                        <div class="footer-legal-links">
+                            <a href="#privacy" class="footer-legal-link">Privacy Policy</a>
+                            <a href="#terms" class="footer-legal-link">Terms of Service</a>
+                            <a href="#cookies" class="footer-legal-link">Cookie Policy</a>
+                        </div>
+                    </div>
+                    <div class="footer-payment">
+                        <span class="payment-text">We Accept:</span>
+                        <div class="payment-methods">
+                            <span class="payment-method">💳 Visa</span>
+                            <span class="payment-method">💳 Mastercard</span>
+                            <span class="payment-method">💰 Cash on Delivery</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script-enhanced.js"></script>
+</body>
+
+</html>

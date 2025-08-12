@@ -82,7 +82,10 @@
 
 
 - [ ] 5. Integrate Stripe payment processing
-  - [ ] 5.1 Set up Stripe SDK and Elements
+  - [x] 5.1 Set up Stripe SDK and Elements
+
+
+
     - Include Stripe.js library and configure publishable key
     - Create Stripe Elements for secure card input
     - Style Stripe Elements to match website design

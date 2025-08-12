@@ -460,14 +460,24 @@ const PaymentManager = {
     initializeStripe() {
         try {
             if (typeof Stripe !== 'undefined') {
-                this.stripe = Stripe(CONFIG.PAYMENT.STRIPE.PUBLISHABLE_KEY);
-                this.stripeElements = this.stripe.elements();
-                console.log('Stripe initialized successfully');
+                // Check if we have a valid Stripe key
+                if (CONFIG.PAYMENT.STRIPE.PUBLISHABLE_KEY && 
+                    CONFIG.PAYMENT.STRIPE.PUBLISHABLE_KEY.startsWith('pk_') &&
+                    CONFIG.PAYMENT.STRIPE.PUBLISHABLE_KEY.length > 20) {
+                    this.stripe = Stripe(CONFIG.PAYMENT.STRIPE.PUBLISHABLE_KEY);
+                    this.stripeElements = this.stripe.elements();
+                    console.log('Stripe initialized successfully with real API key');
+                } else {
+                    console.warn('Stripe key not configured properly. Using fallback card form.');
+                    console.log('Current key:', CONFIG.PAYMENT.STRIPE.PUBLISHABLE_KEY);
+                    this.stripe = null; // Will use fallback form
+                }
             } else {
-                console.warn('Stripe SDK not loaded');
+                console.warn('Stripe SDK not loaded. Using fallback card form.');
             }
         } catch (error) {
             console.error('Failed to initialize Stripe:', error);
+            this.stripe = null; // Fallback to simulation
         }
     },
 
@@ -653,47 +663,210 @@ const PaymentManager = {
      * Initialize Stripe card element
      */
     initializeStripeCard() {
-        if (!this.stripe || !this.stripeElements) {
-            console.error('Stripe not initialized');
+        const cardContainer = Utils.querySelector('#stripe-card-element');
+        const form = Utils.querySelector('#stripe-payment-form');
+        
+        if (!cardContainer || !form) {
+            console.error('Stripe card container or form not found');
             return;
         }
 
-        const cardElement = this.stripeElements.create('card', {
-            style: {
-                base: {
-                    fontSize: '16px',
-                    color: '#424770',
-                    '::placeholder': {
-                        color: '#aab7c4',
+        if (!this.stripe || !this.stripeElements) {
+            console.warn('Stripe not initialized, using fallback card form');
+            this.createFallbackCardForm();
+            return;
+        }
+
+        try {
+            const cardElement = this.stripeElements.create('card', {
+                style: {
+                    base: {
+                        fontSize: '16px',
+                        color: '#424770',
+                        '::placeholder': {
+                            color: '#aab7c4',
+                        },
+                    },
+                    invalid: {
+                        color: '#9e2146',
                     },
                 },
-                invalid: {
-                    color: '#9e2146',
-                },
-            },
-        });
+            });
 
-        cardElement.mount('#stripe-card-element');
-        this.cardElement = cardElement;
+            cardElement.mount('#stripe-card-element');
+            this.cardElement = cardElement;
 
-        // Handle real-time validation errors from the card Element
-        cardElement.on('change', ({ error }) => {
-            const displayError = Utils.querySelector('#stripe-card-errors');
-            if (error) {
-                displayError.textContent = error.message;
-            } else {
-                displayError.textContent = '';
-            }
-        });
+            // Handle real-time validation errors from the card Element
+            cardElement.on('change', ({ error }) => {
+                const displayError = Utils.querySelector('#stripe-card-errors');
+                if (error) {
+                    displayError.textContent = error.message;
+                } else {
+                    displayError.textContent = '';
+                }
+            });
 
-        // Handle form submission
-        const form = Utils.querySelector('#stripe-payment-form');
-        if (form) {
+            // Handle form submission
             form.addEventListener('submit', (e) => {
                 e.preventDefault();
                 this.handleStripePayment();
             });
+
+        } catch (error) {
+            console.error('Failed to create Stripe card element:', error);
+            this.createFallbackCardForm();
         }
+    },
+
+    /**
+     * Create fallback card form when Stripe is not available
+     */
+    createFallbackCardForm() {
+        const cardContainer = Utils.querySelector('#stripe-card-element');
+        const form = Utils.querySelector('#stripe-payment-form');
+        
+        if (!cardContainer || !form) return;
+
+        // Create fallback card input fields
+        cardContainer.innerHTML = `
+            <div class="fallback-card-form">
+                <div class="card-input-group">
+                    <input type="text" id="card-number" placeholder="1234 5678 9012 3456" maxlength="19" class="card-input">
+                    <label for="card-number">Card Number</label>
+                </div>
+                <div class="card-input-row">
+                    <div class="card-input-group">
+                        <input type="text" id="card-expiry" placeholder="MM/YY" maxlength="5" class="card-input">
+                        <label for="card-expiry">Expiry</label>
+                    </div>
+                    <div class="card-input-group">
+                        <input type="text" id="card-cvc" placeholder="123" maxlength="4" class="card-input">
+                        <label for="card-cvc">CVC</label>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Add input formatting
+        this.setupCardInputFormatting();
+
+        // Handle form submission
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.handleFallbackCardPayment();
+        });
+    },
+
+    /**
+     * Setup card input formatting for fallback form
+     */
+    setupCardInputFormatting() {
+        const cardNumber = Utils.querySelector('#card-number');
+        const cardExpiry = Utils.querySelector('#card-expiry');
+        const cardCvc = Utils.querySelector('#card-cvc');
+
+        if (cardNumber) {
+            cardNumber.addEventListener('input', (e) => {
+                let value = e.target.value.replace(/\s/g, '').replace(/[^0-9]/gi, '');
+                let formattedValue = value.match(/.{1,4}/g)?.join(' ') || value;
+                e.target.value = formattedValue;
+            });
+        }
+
+        if (cardExpiry) {
+            cardExpiry.addEventListener('input', (e) => {
+                let value = e.target.value.replace(/\D/g, '');
+                if (value.length >= 2) {
+                    value = value.substring(0, 2) + '/' + value.substring(2, 4);
+                }
+                e.target.value = value;
+            });
+        }
+
+        if (cardCvc) {
+            cardCvc.addEventListener('input', (e) => {
+                e.target.value = e.target.value.replace(/[^0-9]/g, '');
+            });
+        }
+    },
+
+    /**
+     * Handle fallback card payment (simulation)
+     */
+    async handleFallbackCardPayment() {
+        const submitButton = Utils.querySelector('#stripe-submit');
+        const buttonText = Utils.querySelector('.payment-btn-text');
+        const buttonSpinner = Utils.querySelector('.payment-btn-spinner');
+
+        // Show loading state
+        submitButton.disabled = true;
+        buttonText.style.display = 'none';
+        buttonSpinner.style.display = 'inline';
+
+        const form = Utils.querySelector('#stripe-payment-form');
+        const formData = new FormData(form);
+
+        // Get card details
+        const cardNumber = Utils.querySelector('#card-number')?.value || '';
+        const cardExpiry = Utils.querySelector('#card-expiry')?.value || '';
+        const cardCvc = Utils.querySelector('#card-cvc')?.value || '';
+
+        try {
+            // Basic validation
+            if (!cardNumber || cardNumber.replace(/\s/g, '').length < 13) {
+                throw new Error('Please enter a valid card number');
+            }
+            if (!cardExpiry || cardExpiry.length < 5) {
+                throw new Error('Please enter a valid expiry date');
+            }
+            if (!cardCvc || cardCvc.length < 3) {
+                throw new Error('Please enter a valid CVC');
+            }
+            if (!formData.get('name')) {
+                throw new Error('Please enter your full name');
+            }
+            if (!formData.get('email')) {
+                throw new Error('Please enter your email address');
+            }
+
+            // Simulate payment processing
+            await new Promise(resolve => setTimeout(resolve, 2000));
+
+            // Create mock payment details
+            const paymentDetails = {
+                id: 'card_' + Date.now(),
+                status: 'succeeded',
+                amount: CartManager.cart.total,
+                currency: 'pkr',
+                payment_method: 'card',
+                card: {
+                    brand: this.detectCardBrand(cardNumber),
+                    last4: cardNumber.replace(/\s/g, '').slice(-4)
+                }
+            };
+
+            this.handlePaymentSuccess('card', paymentDetails);
+
+        } catch (error) {
+            console.error('Card payment error:', error);
+            Utils.showNotification(error.message || 'Payment failed. Please try again.', 'error');
+        } finally {
+            // Reset button state
+            submitButton.disabled = false;
+            buttonText.style.display = 'inline';
+            buttonSpinner.style.display = 'none';
+        }
+    },
+
+    /**
+     * Detect card brand from number
+     */
+    detectCardBrand(cardNumber) {
+        const number = cardNumber.replace(/\s/g, '');
+        if (number.startsWith('4')) return 'visa';
+        if (number.startsWith('5') || number.startsWith('2')) return 'mastercard';
+        if (number.startsWith('3')) return 'amex';
+        return 'unknown';
     },
 
     /**

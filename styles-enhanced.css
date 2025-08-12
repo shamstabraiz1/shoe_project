@@ -2777,6 +2777,60 @@ body {
     min-height: 20px;
 }
 
+/* Fallback Card Form Styles */
+.fallback-card-form {
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: white;
+}
+
+.card-input-group {
+    position: relative;
+    margin-bottom: 16px;
+}
+
+.card-input-group:last-child {
+    margin-bottom: 0;
+}
+
+.card-input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 16px;
+    font-family: 'Nunito Sans', sans-serif;
+    transition: border-color 0.2s ease;
+    background: white;
+}
+
+.card-input:focus {
+    outline: none;
+    border-color: #2c5aa0;
+    box-shadow: 0 0 0 2px rgba(44, 90, 160, 0.1);
+}
+
+.card-input-group label {
+    position: absolute;
+    top: -8px;
+    left: 8px;
+    background: white;
+    padding: 0 4px;
+    font-size: 12px;
+    color: #666;
+    font-weight: 500;
+}
+
+.card-input-row {
+    display: flex;
+    gap: 12px;
+}
+
+.card-input-row .card-input-group {
+    flex: 1;
+}
+
 .payment-submit-btn {
     width: 100%;
     padding: 14px;

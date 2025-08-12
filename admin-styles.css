@@ -704,15 +704,15 @@ body {
     .sidebar {
         width: 220px;
     }
-    
+
     .main-content {
         margin-left: 220px;
     }
-    
+
     .dashboard-widgets {
         grid-template-columns: 1fr;
     }
-    
+
     .stats-grid {
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     }
@@ -724,41 +724,41 @@ body {
         position: relative;
         height: auto;
     }
-    
+
     .main-content {
         margin-left: 0;
     }
-    
+
     .dashboard-header {
         padding: 16px 20px;
         flex-direction: column;
         gap: 16px;
         align-items: flex-start;
     }
-    
+
     .header-right {
         width: 100%;
         justify-content: space-between;
     }
-    
+
     .dashboard-section {
         padding: 20px;
     }
-    
+
     .section-header {
         flex-direction: column;
         gap: 16px;
         align-items: flex-start;
     }
-    
+
     .stats-grid {
         grid-template-columns: 1fr;
     }
-    
+
     .products-grid {
         grid-template-columns: 1fr;
     }
-    
+
     .form-row {
         grid-template-columns: 1fr;
     }
@@ -770,6 +770,7 @@ body {
         opacity: 0;
         transform: translateY(20px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);

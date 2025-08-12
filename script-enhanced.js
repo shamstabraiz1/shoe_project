@@ -2159,7 +2159,7 @@ const MissionManager = {
 const TestimonialsCarousel = {
     currentIndex: 0,
     totalSlides: 6,
-    visibleCards: 3, // Show 3 cards at once
+    visibleCards: 3, // Show 3 cards at once on desktop
     maxIndex: 1, // 2 positions: 0 (cards 1-3) and 1 (cards 4-6)
     cards: [],
     dots: [],
@@ -2167,6 +2167,13 @@ const TestimonialsCarousel = {
     autoScrollInterval: null,
     direction: 1, // 1 for right, -1 for left
     isAutoScrolling: true,
+    isMobile: false,
+    
+    // Touch/swipe properties
+    startX: 0,
+    currentX: 0,
+    isDragging: false,
+    startTransform: 0,
 
     /**
      * Initialize the testimonials carousel
@@ -2181,38 +2188,83 @@ const TestimonialsCarousel = {
             return;
         }
 
+        this.checkMobile();
+        this.setupMobileProperties();
         this.bindEvents();
+        this.updateDotsVisibility();
         this.startAutoScroll();
         this.updateVisibleCards();
+        
+        // Listen for resize events
+        window.addEventListener('resize', Utils.debounce(() => {
+            this.checkMobile();
+            this.setupMobileProperties();
+            this.updateDotsVisibility();
+            this.updateTrackPosition();
+        }, 250));
     },
 
     /**
-     * Bind click events to dots
+     * Check if we're on mobile
+     */
+    checkMobile() {
+        this.isMobile = window.innerWidth <= 768;
+    },
+
+    /**
+     * Setup mobile-specific properties
+     */
+    setupMobileProperties() {
+        if (this.isMobile) {
+            this.visibleCards = 1; // Show 1 card at once on mobile
+            this.maxIndex = this.totalSlides - 1; // 6 positions: 0-5
+        } else {
+            this.visibleCards = 3; // Show 3 cards at once on desktop
+            this.maxIndex = 1; // 2 positions: 0 (cards 1-3) and 1 (cards 4-6)
+        }
+    },
+
+    /**
+     * Bind events for both desktop and mobile
      */
     bindEvents() {
+        // Dot navigation
         this.dots.forEach((dot, index) => {
             dot.addEventListener('click', (e) => {
                 e.preventDefault();
                 this.stopAutoScroll();
-                this.goToSlide(index);
-                // Restart auto-scroll after user interaction
+                this.goToSlide(this.isMobile ? index : index);
                 setTimeout(() => this.startAutoScroll(), 3000);
             });
         });
 
-        // Pause auto-scroll on hover
+        // Desktop hover events
         const carousel = Utils.querySelector('.testimonials-carousel');
         if (carousel) {
             carousel.addEventListener('mouseenter', () => {
-                this.stopAutoScroll();
+                if (!this.isMobile) this.stopAutoScroll();
             });
 
             carousel.addEventListener('mouseleave', () => {
-                this.startAutoScroll();
+                if (!this.isMobile) this.startAutoScroll();
             });
         }
 
-        // Handle keyboard navigation
+        // Touch/swipe events for mobile
+        if (this.track) {
+            // Touch events
+            this.track.addEventListener('touchstart', (e) => this.handleTouchStart(e), { passive: true });
+            this.track.addEventListener('touchmove', (e) => this.handleTouchMove(e), { passive: false });
+            this.track.addEventListener('touchend', (e) => this.handleTouchEnd(e), { passive: true });
+
+            // Mouse events for desktop drag (optional)
+            this.track.addEventListener('mousedown', (e) => this.handleMouseDown(e));
+            this.track.addEventListener('mousemove', (e) => this.handleMouseMove(e));
+            this.track.addEventListener('mouseup', (e) => this.handleMouseUp(e));
+            this.track.addEventListener('mouseleave', (e) => this.handleMouseUp(e));
+        }
+
+        // Keyboard navigation
         document.addEventListener('keydown', (e) => {
             if (e.target.closest('.testimonials-section')) {
                 switch (e.key) {
@@ -2234,7 +2286,94 @@ const TestimonialsCarousel = {
     },
 
     /**
-     * Go to specific slide position (showing 3 cards)
+     * Handle touch start
+     */
+    handleTouchStart(e) {
+        if (!this.isMobile) return;
+        this.startX = e.touches[0].clientX;
+        this.isDragging = true;
+        this.stopAutoScroll();
+        
+        // Get current transform value
+        const transform = this.track.style.transform;
+        const match = transform.match(/translateX\((-?\d+(?:\.\d+)?)%\)/);
+        this.startTransform = match ? parseFloat(match[1]) : 0;
+        
+        this.track.style.transition = 'none';
+    },
+
+    /**
+     * Handle touch move
+     */
+    handleTouchMove(e) {
+        if (!this.isMobile || !this.isDragging) return;
+        
+        e.preventDefault();
+        this.currentX = e.touches[0].clientX;
+        const diffX = this.currentX - this.startX;
+        const cardWidth = this.track.offsetWidth / this.totalSlides;
+        const movePercent = (diffX / cardWidth) * (100 / this.totalSlides);
+        
+        const newTransform = this.startTransform + movePercent;
+        this.track.style.transform = `translateX(${newTransform}%)`;
+    },
+
+    /**
+     * Handle touch end
+     */
+    handleTouchEnd(e) {
+        if (!this.isMobile || !this.isDragging) return;
+        
+        this.isDragging = false;
+        this.track.style.transition = 'transform 0.3s ease-out';
+        
+        const diffX = this.currentX - this.startX;
+        const threshold = 50; // Minimum swipe distance
+        
+        if (Math.abs(diffX) > threshold) {
+            if (diffX > 0) {
+                this.previousSlide();
+            } else {
+                this.nextSlide();
+            }
+        } else {
+            // Snap back to current position
+            this.updateTrackPosition();
+        }
+        
+        setTimeout(() => this.startAutoScroll(), 3000);
+    },
+
+    /**
+     * Handle mouse down (for desktop drag)
+     */
+    handleMouseDown(e) {
+        if (this.isMobile) return;
+        this.startX = e.clientX;
+        this.isDragging = true;
+        this.stopAutoScroll();
+        e.preventDefault();
+    },
+
+    /**
+     * Handle mouse move
+     */
+    handleMouseMove(e) {
+        if (this.isMobile || !this.isDragging) return;
+        e.preventDefault();
+    },
+
+    /**
+     * Handle mouse up
+     */
+    handleMouseUp(e) {
+        if (this.isMobile || !this.isDragging) return;
+        this.isDragging = false;
+        setTimeout(() => this.startAutoScroll(), 3000);
+    },
+
+    /**
+     * Go to specific slide position
      */
     goToSlide(index) {
         if (index < 0 || index > this.maxIndex || index === this.currentIndex) {
@@ -2250,10 +2389,23 @@ const TestimonialsCarousel = {
         // Update current index
         this.currentIndex = index;
 
-        // Add active class to current dot (representing the group)
-        const activeDotIndex = Math.min(index, this.dots.length - 1);
-        this.dots[activeDotIndex].classList.add('active');
-        this.dots[activeDotIndex].setAttribute('aria-selected', 'true');
+        // Add active class to current dot
+        let activeDotIndex;
+        if (this.isMobile) {
+            // Mobile: show individual card dots
+            activeDotIndex = index;
+        } else {
+            // Desktop: show group dots (0 for cards 1-3, 1 for cards 4-6)
+            activeDotIndex = index;
+        }
+        
+        if (this.dots[activeDotIndex]) {
+            this.dots[activeDotIndex].classList.add('active');
+            this.dots[activeDotIndex].setAttribute('aria-selected', 'true');
+        }
+
+        // Hide/show dots based on device
+        this.updateDotsVisibility();
 
         // Update track position
         this.updateTrackPosition();
@@ -2261,35 +2413,58 @@ const TestimonialsCarousel = {
     },
 
     /**
-     * Go to next slide (move 3 cards)
+     * Update dots visibility based on device type
+     */
+    updateDotsVisibility() {
+        this.dots.forEach((dot, index) => {
+            if (this.isMobile) {
+                // Mobile: show all 6 dots
+                dot.style.display = 'inline-block';
+            } else {
+                // Desktop: show only first 2 dots (for groups)
+                dot.style.display = index < 2 ? 'inline-block' : 'none';
+            }
+        });
+    },
+
+    /**
+     * Go to next slide
      */
     nextSlide() {
         let nextIndex = this.currentIndex + 1;
         if (nextIndex > this.maxIndex) {
             nextIndex = 0;
-            this.direction = 1; // Continue right or switch direction
+            this.direction = 1;
         }
         this.goToSlide(nextIndex);
     },
 
     /**
-     * Go to previous slide (move 3 cards)
+     * Go to previous slide
      */
     previousSlide() {
         let prevIndex = this.currentIndex - 1;
         if (prevIndex < 0) {
             prevIndex = this.maxIndex;
-            this.direction = -1; // Continue left or switch direction
+            this.direction = -1;
         }
         this.goToSlide(prevIndex);
     },
 
     /**
-     * Update track position (showing 3 cards at a time)
+     * Update track position based on device type
      */
     updateTrackPosition() {
-        // Move by 50% for each position (position 0: cards 1-3, position 1: cards 4-6)
-        const translateX = -this.currentIndex * 50;
+        let translateX;
+        
+        if (this.isMobile) {
+            // Mobile: move by 100/6 = 16.67% for each card
+            translateX = -this.currentIndex * (100 / this.totalSlides);
+        } else {
+            // Desktop: move by 50% for each position (position 0: cards 1-3, position 1: cards 4-6)
+            translateX = -this.currentIndex * 50;
+        }
+        
         this.track.style.transform = `translateX(${translateX}%)`;
     },
 

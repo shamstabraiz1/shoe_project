@@ -2103,18 +2103,113 @@ body {
 }
 
 /* Mobile responsive */
-@media (max-width: 480px) {
+@media (max-width: 768px) {
     .chat-window {
-        width: calc(100vw - 40px);
-        height: 70vh;
-        bottom: 80px;
-        right: 20px;
-        left: 20px;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100vw;
+        height: 100vh;
+        max-height: 100vh;
+        border-radius: 0;
+        z-index: 10001;
     }
 
     .chatbot-widget {
-        right: 20px;
-        bottom: 20px;
+        right: 15px;
+        bottom: 15px;
+    }
+
+    .chat-toggle {
+        width: 55px;
+        height: 55px;
+        z-index: 10000;
+    }
+
+    .chat-header {
+        padding: 16px;
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        background: var(--color-primary);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .chat-close {
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
+        padding: 8px;
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .chat-close:hover {
+        background: rgba(255, 255, 255, 0.3);
+    }
+
+    .chat-messages {
+        padding: 12px;
+        flex: 1;
+        overflow-y: auto;
+    }
+
+    .message-content {
+        font-size: 14px;
+    }
+
+    .quick-actions {
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .quick-action {
+        font-size: 12px;
+        padding: 6px 10px;
+    }
+
+    .chat-input-container {
+        position: sticky;
+        bottom: 0;
+        background: white;
+        border-top: 1px solid #eee;
+        padding: 12px;
+    }
+
+    .chat-input {
+        font-size: 16px; /* Prevents zoom on iOS */
+    }
+}
+
+@media (max-width: 480px) {
+    .chatbot-widget {
+        right: 10px;
+        bottom: 10px;
+    }
+
+    .chat-toggle {
+        width: 50px;
+        height: 50px;
+    }
+
+    .chat-header {
+        padding: 12px;
+    }
+
+    .chat-header h4 {
+        font-size: 16px;
+    }
+
+    .chat-messages {
+        padding: 10px;
+    }
+
+    .chat-input-container {
+        padding: 10px;
     }
 }
 

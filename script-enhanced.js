@@ -2638,6 +2638,13 @@ const ChatbotManager = {
         chatWindow.style.display = 'flex';
         this.isOpen = true;
 
+        // Prevent body scrolling on mobile
+        if (window.innerWidth <= 768) {
+            document.body.style.overflow = 'hidden';
+            document.body.style.position = 'fixed';
+            document.body.style.width = '100%';
+        }
+
         // Focus input
         setTimeout(() => {
             if (this.chatInput) this.chatInput.focus();
@@ -2653,6 +2660,13 @@ const ChatbotManager = {
 
         chatWindow.style.display = 'none';
         this.isOpen = false;
+
+        // Restore body scrolling on mobile
+        if (window.innerWidth <= 768) {
+            document.body.style.overflow = '';
+            document.body.style.position = '';
+            document.body.style.width = '';
+        }
     },
 
     /**

@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shoe Point - Integration Test</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f7fa;
+        }
+        
+        .test-container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e1e5e9;
+            border-radius: 8px;
+        }
+        
+        .test-section h2 {
+            color: #3498db;
+            margin-bottom: 15px;
+        }
+        
+        .test-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+            transition: background 0.3s ease;
+        }
+        
+        .test-btn:hover {
+            background: #2980b9;
+        }
+        
+        .test-btn.success {
+            background: #27ae60;
+        }
+        
+        .test-btn.danger {
+            background: #e74c3c;
+        }
+        
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .status.info {
+            background: #cce5ff;
+            color: #004085;
+            border: 1px solid #b3d7ff;
+        }
+        
+        .links {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 30px;
+        }
+        
+        .link-btn {
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-weight: bold;
+            transition: background 0.3s ease;
+        }
+        
+        .link-btn:hover {
+            background: #5a6fd8;
+        }
+        
+        .instructions {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .instructions h3 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+        
+        .instructions ol {
+            color: #856404;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🚀 Shoe Point - Admin Integration Test</h1>
+        
+        <div class="instructions">
+            <h3>📋 Testing Instructions:</h3>
+            <ol>
+                <li><strong>Open Admin Dashboard:</strong> Click "Open Admin Dashboard" below</li>
+                <li><strong>Login:</strong> Use username: <code>admin</code>, password: <code>shoepoint123</code></li>
+                <li><strong>Test Integration:</strong> Use the buttons below to simulate orders</li>
+                <li><strong>Watch Real-time Updates:</strong> See orders appear instantly in admin dashboard</li>
+            </ol>
+        </div>
+        
+        <div class="test-section">
+            <h2>🛒 Simulate Customer Orders</h2>
+            <p>Click these buttons to simulate customers placing orders. Watch the admin dashboard for real-time updates!</p>
+            
+            <button class="test-btn success" onclick="simulateOrder('Running Shoes', 3500)">
+                Order Running Shoes (Rs.3,500)
+            </button>
+            
+            <button class="test-btn success" onclick="simulateOrder('Basketball Shoes', 4000)">
+                Order Basketball Shoes (Rs.4,000)
+            </button>
+            
+            <button class="test-btn success" onclick="simulateOrder('Soccer Cleats', 2850)">
+                Order Soccer Cleats (Rs.2,850)
+            </button>
+            
+            <button class="test-btn success" onclick="simulateLargeOrder()">
+                Simulate Large Order (Rs.12,000)
+            </button>
+            
+            <div id="order-status"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>📊 Admin Dashboard Features</h2>
+            <p>Your admin dashboard includes:</p>
+            <ul>
+                <li>✅ Real-time order notifications</li>
+                <li>✅ Product management (Add, Edit, Delete)</li>
+                <li>✅ Customer tracking</li>
+                <li>✅ Sales analytics</li>
+                <li>✅ Revenue monitoring</li>
+                <li>✅ Inventory management</li>
+            </ul>
+        </div>
+        
+        <div class="test-section">
+            <h2>🔧 System Status</h2>
+            <button class="test-btn" onclick="checkSystemStatus()">Check System Status</button>
+            <button class="test-btn" onclick="clearTestData()">Clear Test Data</button>
+            <div id="system-status"></div>
+        </div>
+        
+        <div class="links">
+            <a href="admin.html" target="_blank" class="link-btn">
+                🎛️ Open Admin Dashboard
+            </a>
+            <a href="index-enhanced.html" target="_blank" class="link-btn">
+                🛍️ Open Main Store
+            </a>
+        </div>
+    </div>
+
+    <script>
+        // Simulate order function
+        function simulateOrder(productName, price) {
+            const order = {
+                orderId: 'SP-' + Date.now(),
+                customerId: 'test_customer_' + Math.random().toString(36).substr(2, 9),
+                customerInfo: {
+                    name: 'Test Customer',
+                    email: 'test@example.com',
+                    phone: '+92-300-1234567'
+                },
+                items: [{
+                    id: 'item_' + Date.now(),
+                    name: productName,
+                    price: price,
+                    quantity: 1,
+                    image: 'card 1.webp'
+                }],
+                payment: {
+                    method: 'test',
+                    transactionId: 'test_' + Date.now(),
+                    amount: price,
+                    currency: 'PKR',
+                    status: 'completed'
+                },
+                totals: {
+                    subtotal: price,
+                    shipping: 0,
+                    total: price
+                },
+                status: 'confirmed',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            };
+            
+            // Save order to localStorage
+            const orders = JSON.parse(localStorage.getItem('shoepoint_orders') || '[]');
+            orders.push(order);
+            localStorage.setItem('shoepoint_orders', JSON.stringify(orders));
+            
+            // Notify admin dashboard
+            if (typeof BroadcastChannel !== 'undefined') {
+                const channel = new BroadcastChannel('shoepoint_admin');
+                channel.postMessage({
+                    type: 'NEW_ORDER',
+                    order: order
+                });
+                channel.close();
+            }
+            
+            // Show status
+            const statusDiv = document.getElementById('order-status');
+            statusDiv.innerHTML = `
+                <div class="status success">
+                    ✅ Order simulated successfully!<br>
+                    Order #${order.orderId} - ${productName} - Rs.${price.toLocaleString()}<br>
+                    <small>Check your admin dashboard for real-time update!</small>
+                </div>
+            `;
+            
+            setTimeout(() => {
+                statusDiv.innerHTML = '';
+            }, 5000);
+        }
+        
+        // Simulate large order
+        function simulateLargeOrder() {
+            const items = [
+                { name: 'Running Shoes', price: 3500 },
+                { name: 'Basketball Shoes', price: 4000 },
+                { name: 'Soccer Cleats', price: 2850 },
+                { name: 'Tennis Shoes', price: 3200 }
+            ];
+            
+            const order = {
+                orderId: 'SP-' + Date.now(),
+                customerId: 'vip_customer_' + Math.random().toString(36).substr(2, 9),
+                customerInfo: {
+                    name: 'VIP Customer',
+                    email: 'vip@example.com',
+                    phone: '+92-300-9876543'
+                },
+                items: items.map((item, index) => ({
+                    id: 'item_' + Date.now() + '_' + index,
+                    name: item.name,
+                    price: item.price,
+                    quantity: 1,
+                    image: `card ${index + 1}.webp`
+                })),
+                payment: {
+                    method: 'test',
+                    transactionId: 'large_order_' + Date.now(),
+                    amount: 13550,
+                    currency: 'PKR',
+                    status: 'completed'
+                },
+                totals: {
+                    subtotal: 13550,
+                    shipping: 0, // Free shipping for large orders
+                    total: 13550
+                },
+                status: 'confirmed',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            };
+            
+            // Save order
+            const orders = JSON.parse(localStorage.getItem('shoepoint_orders') || '[]');
+            orders.push(order);
+            localStorage.setItem('shoepoint_orders', JSON.stringify(orders));
+            
+            // Notify admin
+            if (typeof BroadcastChannel !== 'undefined') {
+                const channel = new BroadcastChannel('shoepoint_admin');
+                channel.postMessage({
+                    type: 'NEW_ORDER',
+                    order: order
+                });
+                channel.close();
+            }
+            
+            // Show status
+            const statusDiv = document.getElementById('order-status');
+            statusDiv.innerHTML = `
+                <div class="status success">
+                    🎉 Large order simulated successfully!<br>
+                    Order #${order.orderId} - 4 items - Rs.13,550<br>
+                    <small>This is a VIP order! Check admin dashboard.</small>
+                </div>
+            `;
+            
+            setTimeout(() => {
+                statusDiv.innerHTML = '';
+            }, 5000);
+        }
+        
+        // Check system status
+        function checkSystemStatus() {
+            const orders = JSON.parse(localStorage.getItem('shoepoint_orders') || '[]');
+            const products = JSON.parse(localStorage.getItem('shoepoint_admin_products') || '[]');
+            const adminAuth = localStorage.getItem('shoepoint_admin_auth');
+            
+            const statusDiv = document.getElementById('system-status');
+            statusDiv.innerHTML = `
+                <div class="status info">
+                    📊 System Status:<br>
+                    • Orders in database: ${orders.length}<br>
+                    • Products in catalog: ${products.length}<br>
+                    • Admin authentication: ${adminAuth ? '✅ Active' : '❌ Not logged in'}<br>
+                    • BroadcastChannel support: ${typeof BroadcastChannel !== 'undefined' ? '✅ Available' : '❌ Not supported'}<br>
+                    • LocalStorage: ${typeof Storage !== 'undefined' ? '✅ Available' : '❌ Not supported'}
+                </div>
+            `;
+        }
+        
+        // Clear test data
+        function clearTestData() {
+            if (confirm('Are you sure you want to clear all test data? This will remove all orders and reset the system.')) {
+                localStorage.removeItem('shoepoint_orders');
+                localStorage.removeItem('admin_notifications');
+                
+                const statusDiv = document.getElementById('system-status');
+                statusDiv.innerHTML = `
+                    <div class="status success">
+                        🧹 Test data cleared successfully!<br>
+                        All orders and notifications have been removed.
+                    </div>
+                `;
+                
+                setTimeout(() => {
+                    statusDiv.innerHTML = '';
+                }, 3000);
+            }
+        }
+        
+        // Auto-check system status on load
+        window.addEventListener('load', () => {
+            setTimeout(checkSystemStatus, 1000);
+        });
+    </script>
+</body>
+</html>

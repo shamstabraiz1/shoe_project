@@ -105,9 +105,9 @@ const Utils = {
             font-family: 'Nunito Sans', sans-serif;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         `;
-        
+
         document.body.appendChild(notification);
-        
+
         setTimeout(() => {
             notification.style.opacity = '0';
             notification.style.transform = 'translateX(-50%) translateY(-20px)';
@@ -188,7 +188,7 @@ const CartManager = {
 
             const itemId = this.generateItemId(productName, options);
             const existingItem = this.cart.items.find(item => item.id === itemId);
-            
+
             if (existingItem) {
                 existingItem.quantity += (options.quantity || 1);
             } else {
@@ -200,6 +200,7 @@ const CartManager = {
                     image: options.image || this.getProductImage(productName),
                     category: options.category || 'general',
                     size: options.size || null,
+                    color: options.color || null,
                     addedAt: Date.now()
                 });
             }
@@ -221,7 +222,8 @@ const CartManager = {
     generateItemId(productName, options = {}) {
         const baseId = productName.toLowerCase().replace(/\s+/g, '-');
         const sizeId = options.size ? `-size-${options.size}` : '';
-        return `${baseId}${sizeId}`;
+        const colorId = options.color ? `-color-${options.color.toLowerCase()}` : '';
+        return `${baseId}${sizeId}${colorId}`;
     },
 
     /**
@@ -297,7 +299,7 @@ const CartManager = {
             const removedItem = this.cart.items[itemIndex];
             this.cart.items.splice(itemIndex, 1);
             this.cart.timestamp = Date.now();
-            
+
             this.calculateTotals();
             this.saveToStorage();
             this.updateDisplay();
@@ -324,13 +326,13 @@ const CartManager = {
     calculateTotals() {
         try {
             this.cart.subtotal = this.cart.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-            
+
             // Calculate shipping
             this.cart.shipping = this.cart.subtotal >= CONFIG.FREE_SHIPPING_THRESHOLD ? 0 : 500;
-            
+
             // Calculate total
             this.cart.total = this.cart.subtotal + this.cart.shipping;
-            
+
             return {
                 subtotal: this.cart.subtotal,
                 shipping: this.cart.shipping,
@@ -380,7 +382,7 @@ const CartManager = {
         }
 
         const itemCount = this.getItemCount();
-        
+
         cartSummary.innerHTML = `
             <div class="cart-header">
                 <h3>Shopping Cart (${itemCount} item${itemCount !== 1 ? 's' : ''})</h3>
@@ -392,7 +394,10 @@ const CartManager = {
                         <img src="${item.image}" alt="${item.name}" class="cart-item-image" width="50" height="50">
                         <div class="cart-item-details">
                             <h4 class="cart-item-name">${item.name}</h4>
-                            ${item.size ? `<span class="cart-item-size">Size: ${item.size}</span>` : ''}
+                            <div class="cart-item-options">
+                                ${item.size ? `<span class="cart-item-size">Size: ${item.size}</span>` : ''}
+                                ${item.color ? `<span class="cart-item-color">Color: ${item.color}</span>` : ''}
+                            </div>
                             <div class="cart-item-controls">
                                 <button onclick="CartManager.updateQuantity('${item.id}', ${item.quantity - 1})" class="quantity-btn">-</button>
                                 <span class="quantity">${item.quantity}</span>
@@ -415,10 +420,10 @@ const CartManager = {
                     <span>Shipping:</span>
                     <span>${this.cart.shipping === 0 ? 'Free' : Utils.formatCurrency(this.cart.shipping)}</span>
                 </div>
-                ${this.cart.subtotal >= CONFIG.FREE_SHIPPING_THRESHOLD ? 
-                    '<div class="free-shipping-notice">🎉 You qualify for free shipping!</div>' : 
-                    `<div class="shipping-notice">Add ${Utils.formatCurrency(CONFIG.FREE_SHIPPING_THRESHOLD - this.cart.subtotal)} more for free shipping</div>`
-                }
+                ${this.cart.subtotal >= CONFIG.FREE_SHIPPING_THRESHOLD ?
+                '<div class="free-shipping-notice">🎉 You qualify for free shipping!</div>' :
+                `<div class="shipping-notice">Add ${Utils.formatCurrency(CONFIG.FREE_SHIPPING_THRESHOLD - this.cart.subtotal)} more for free shipping</div>`
+            }
                 <div class="total-line total-final">
                     <span><strong>Total:</strong></span>
                     <span><strong>${Utils.formatCurrency(this.cart.total)}</strong></span>
@@ -430,7 +435,7 @@ const CartManager = {
                 </button>
             </div>
         `;
-        
+
         cartSummary.style.display = 'block';
     }
 };
@@ -482,7 +487,7 @@ const PaymentManager = {
         }
 
         const { total } = CartManager.calculateTotals();
-        
+
         modal.querySelector('.modal-body').innerHTML = `
             <div class="payment-container">
                 <div class="payment-header">
@@ -550,14 +555,14 @@ const PaymentManager = {
 
         // Setup payment method tabs
         this.setupPaymentTabs();
-        
+
         // Initialize PayPal (PayPal requires USD, so we convert PKR to USD)
         const totalUSD = (total / 280).toFixed(2); // Convert PKR to USD (approximate rate)
         this.initializePayPal(parseFloat(totalUSD), total);
-        
+
         // Initialize Stripe card element
         this.initializeStripeCard();
-        
+
         modal.style.display = 'flex';
         modal.setAttribute('aria-hidden', 'false');
     },
@@ -568,22 +573,22 @@ const PaymentManager = {
     setupPaymentTabs() {
         const tabs = Utils.querySelectorAll('.payment-tab');
         const panels = Utils.querySelectorAll('.payment-panel');
-        
+
         tabs.forEach(tab => {
             tab.addEventListener('click', (e) => {
                 const method = e.target.getAttribute('data-method');
-                
+
                 // Update active tab
                 tabs.forEach(t => t.classList.remove('active'));
                 tab.classList.add('active');
-                
+
                 // Update active panel
                 panels.forEach(p => p.classList.remove('active'));
                 const targetPanel = Utils.querySelector(`#${method}-panel`);
                 if (targetPanel) {
                     targetPanel.classList.add('active');
                 }
-                
+
                 this.currentPaymentMethod = method;
             });
         });
@@ -618,23 +623,23 @@ const PaymentManager = {
                     }]
                 });
             },
-            
+
             onApprove: (data, actions) => {
                 return actions.order.capture().then((details) => {
                     this.handlePaymentSuccess('paypal', details);
                 });
             },
-            
+
             onError: (err) => {
                 console.error('PayPal payment error:', err);
                 Utils.showNotification('Payment failed. Please try again.', 'error');
             },
-            
+
             onCancel: (data) => {
                 console.log('PayPal payment cancelled:', data);
                 Utils.showNotification('Payment cancelled', 'error');
             },
-            
+
             style: {
                 layout: 'vertical',
                 color: 'blue',
@@ -672,7 +677,7 @@ const PaymentManager = {
         this.cardElement = cardElement;
 
         // Handle real-time validation errors from the card Element
-        cardElement.on('change', ({error}) => {
+        cardElement.on('change', ({ error }) => {
             const displayError = Utils.querySelector('#stripe-card-errors');
             if (error) {
                 displayError.textContent = error.message;
@@ -713,7 +718,7 @@ const PaymentManager = {
         const formData = new FormData(form);
 
         try {
-            const {token, error} = await this.stripe.createToken(this.cardElement, {
+            const { token, error } = await this.stripe.createToken(this.cardElement, {
                 name: formData.get('name'),
                 email: formData.get('email')
             });
@@ -724,7 +729,7 @@ const PaymentManager = {
 
             // Simulate payment processing (in real implementation, send to your server)
             await this.simulateStripePayment(token);
-            
+
         } catch (error) {
             console.error('Stripe payment error:', error);
             Utils.showNotification(error.message || 'Payment failed. Please try again.', 'error');
@@ -754,7 +759,7 @@ const PaymentManager = {
                         last4: token.card.last4
                     }
                 };
-                
+
                 this.handlePaymentSuccess('stripe', paymentDetails);
                 resolve(paymentDetails);
             }, 2000);
@@ -768,24 +773,57 @@ const PaymentManager = {
         try {
             // Create order
             const order = this.createOrder(method, paymentDetails);
-            
+
+            // Notify admin dashboard if open
+            this.notifyAdminDashboard(order);
+
             // Clear cart
             CartManager.clearCart();
-            
+
             // Hide payment modal
             this.hidePaymentForm();
-            
+
             // Show success message
             Utils.showNotification('Payment successful! Your order has been placed.', 'success');
-            
+
             // Show order confirmation
             this.showOrderConfirmation(order);
-            
+
             console.log('Payment successful:', paymentDetails);
-            
+
         } catch (error) {
             console.error('Error handling payment success:', error);
             Utils.showNotification('Payment processed but order creation failed', 'error');
+        }
+    },
+
+    /**
+     * Notify admin dashboard of new order
+     */
+    notifyAdminDashboard(order) {
+        try {
+            // Try to notify admin dashboard if it's open
+            if (typeof BroadcastChannel !== 'undefined') {
+                const channel = new BroadcastChannel('shoepoint_admin');
+                channel.postMessage({
+                    type: 'NEW_ORDER',
+                    order: order
+                });
+                channel.close();
+            }
+            
+            // Also store in localStorage for admin to pick up
+            const notifications = JSON.parse(localStorage.getItem('admin_notifications') || '[]');
+            notifications.push({
+                type: 'NEW_ORDER',
+                order: order,
+                timestamp: Date.now(),
+                read: false
+            });
+            localStorage.setItem('admin_notifications', JSON.stringify(notifications));
+            
+        } catch (error) {
+            console.log('Could not notify admin dashboard:', error);
         }
     },
 
@@ -908,7 +946,7 @@ const CountdownManager = {
     init() {
         const startDate = new Date();
         this.endDate = new Date(startDate.getTime() + CONFIG.COUNTDOWN_DURATION_DAYS * 24 * 60 * 60 * 1000);
-        
+
         this.updateDisplay();
         this.intervalId = setInterval(() => this.updateDisplay(), 1000);
     },
@@ -939,7 +977,7 @@ const CountdownManager = {
             elements.days.textContent = '00';
             elements.hours.textContent = '00';
             elements.minutes.textContent = '00';
-            
+
             if (this.intervalId) {
                 clearInterval(this.intervalId);
             }
@@ -1100,11 +1138,11 @@ const ProductCatalog = {
 
             // Show category-specific products
             this.showCategoryProducts(category);
-            
+
             // Smooth scroll to products section
             const productsSection = Utils.querySelector('.products-section');
             if (productsSection) {
-                productsSection.scrollIntoView({ 
+                productsSection.scrollIntoView({
                     behavior: 'smooth',
                     block: 'start'
                 });
@@ -1142,7 +1180,7 @@ const ProductCatalog = {
 
         // Check if category products are already displayed
         let categoryGrid = productsSection.querySelector('.category-products-grid');
-        
+
         if (!categoryGrid) {
             categoryGrid = document.createElement('div');
             categoryGrid.className = 'category-products-grid';
@@ -1153,7 +1191,7 @@ const ProductCatalog = {
                 grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
                 gap: 24px;
             `;
-            
+
             // Insert after the main products grid
             const mainGrid = productsSection.querySelector('.products-grid');
             if (mainGrid) {
@@ -1191,7 +1229,7 @@ const ProductCatalog = {
                 ← Back to All Products
             </button>
         `;
-        
+
         categoryGrid.parentNode.insertBefore(backButton, categoryGrid.nextSibling);
     },
 
@@ -1238,23 +1276,93 @@ const EventHandlers = {
      */
     setupCartButtons() {
         const cartButtons = Utils.querySelectorAll(CONFIG.SELECTORS.cartButtons);
-        
+
         cartButtons.forEach(button => {
             button.addEventListener('click', (e) => {
                 e.preventDefault();
-                
+
                 const productName = button.getAttribute('data-product');
                 const price = button.getAttribute('data-price');
                 const image = button.getAttribute('data-image');
-                
+
                 if (productName && price) {
-                    const options = {};
+                    // Get selected size and color from the product card
+                    const productCard = button.closest('.product-card');
+                    const selectedSize = productCard.querySelector('.size-btn.selected')?.getAttribute('data-size');
+                    const selectedColor = productCard.querySelector('.color-btn.selected')?.getAttribute('data-color');
+
+                    // Show warning if no size selected (color is optional)
+                    if (!selectedSize) {
+                        Utils.showNotification('Please select a size', 'error');
+                        return;
+                    }
+
+                    const options = {
+                        size: selectedSize
+                    };
+
+                    // Add color only if selected (optional)
+                    if (selectedColor) {
+                        options.color = selectedColor;
+                    }
                     if (image) {
                         options.image = image;
                     }
                     CartManager.addItem(productName, parseFloat(price), options);
                 } else {
                     console.error('Product data missing from button');
+                }
+            });
+        });
+
+        // Setup size and color selection
+        this.setupProductOptions();
+    },
+
+    /**
+     * Setup product size and color selection
+     */
+    setupProductOptions() {
+        // Size button handlers with toggle functionality
+        const sizeButtons = Utils.querySelectorAll('.size-btn');
+        sizeButtons.forEach(button => {
+            button.addEventListener('click', (e) => {
+                e.preventDefault();
+
+                const productCard = button.closest('.product-card');
+
+                // Toggle functionality: if already selected, unselect it
+                if (button.classList.contains('selected')) {
+                    button.classList.remove('selected');
+                } else {
+                    // Remove selected class from other size buttons in the same product
+                    const otherSizeButtons = productCard.querySelectorAll('.size-btn');
+                    otherSizeButtons.forEach(btn => btn.classList.remove('selected'));
+
+                    // Add selected class to clicked button
+                    button.classList.add('selected');
+                }
+            });
+        });
+
+        // Color button handlers with toggle functionality
+        const colorButtons = Utils.querySelectorAll('.color-btn');
+        colorButtons.forEach(button => {
+            button.addEventListener('click', (e) => {
+                e.preventDefault();
+
+                const productCard = button.closest('.product-card');
+
+                // Toggle functionality: if already selected, unselect it
+                if (button.classList.contains('selected')) {
+                    button.classList.remove('selected');
+                } else {
+                    // Remove selected class from other color buttons in the same product
+                    const otherColorButtons = productCard.querySelectorAll('.color-btn');
+                    otherColorButtons.forEach(btn => btn.classList.remove('selected'));
+
+                    // Add selected class to clicked button
+                    button.classList.add('selected');
                 }
             });
         });
@@ -1265,16 +1373,16 @@ const EventHandlers = {
      */
     setupShopButtons() {
         const shopButtons = Utils.querySelectorAll(CONFIG.SELECTORS.shopButtons);
-        
+
         shopButtons.forEach(button => {
             button.addEventListener('click', (e) => {
                 e.preventDefault();
                 ProductCatalog.showCategories();
-                
+
                 // Smooth scroll to categories
                 const categoriesSection = Utils.querySelector('.categories-section');
                 if (categoriesSection) {
-                    categoriesSection.scrollIntoView({ 
+                    categoriesSection.scrollIntoView({
                         behavior: 'smooth',
                         block: 'start'
                     });
@@ -1288,16 +1396,16 @@ const EventHandlers = {
      */
     setupViewMoreButton() {
         const viewMoreBtn = Utils.querySelector(CONFIG.SELECTORS.viewMoreBtn);
-        
+
         if (viewMoreBtn) {
             viewMoreBtn.addEventListener('click', (e) => {
                 e.preventDefault();
                 ProductCatalog.showCategories();
-                
+
                 // Smooth scroll to categories
                 const categoriesSection = Utils.querySelector('.categories-section');
                 if (categoriesSection) {
-                    categoriesSection.scrollIntoView({ 
+                    categoriesSection.scrollIntoView({
                         behavior: 'smooth',
                         block: 'start'
                     });
@@ -1312,12 +1420,12 @@ const EventHandlers = {
     setupCategoryCards() {
         // Setup discover buttons
         const discoverButtons = Utils.querySelectorAll('.btn-discover');
-        
+
         discoverButtons.forEach(button => {
             button.addEventListener('click', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                
+
                 const categoryId = button.getAttribute('data-category');
                 if (categoryId) {
                     ProductCatalog.discoverCategory(categoryId);
@@ -1329,13 +1437,13 @@ const EventHandlers = {
 
         // Setup category card click handlers (for accessibility)
         const categoryCards = Utils.querySelectorAll('.category-card');
-        
+
         categoryCards.forEach(card => {
             // Click handler
             card.addEventListener('click', (e) => {
                 // Don't trigger if clicking on the button
                 if (e.target.closest('.btn-discover')) return;
-                
+
                 const categoryId = card.getAttribute('data-category');
                 if (categoryId) {
                     ProductCatalog.discoverCategory(categoryId);
@@ -1409,38 +1517,38 @@ const App = {
     init() {
         try {
             console.log('Initializing Shoe Point application...');
-            
+
             // Initialize managers one by one with error handling
             console.log('Initializing CartManager...');
             CartManager.init();
-            
+
             console.log('Initializing CountdownManager...');
             CountdownManager.init();
-            
+
             console.log('Initializing EventHandlers...');
             EventHandlers.init();
-            
+
             console.log('Initializing ShowcaseManager...');
             ShowcaseManager.init();
-            
+
             console.log('Initializing MissionManager...');
             MissionManager.init();
-            
+
             console.log('Initializing PaymentManager...');
             PaymentManager.init();
-            
+
             console.log('Initializing TestimonialsCarousel...');
             TestimonialsCarousel.init();
-            
+
             console.log('Initializing NewsletterManager...');
             NewsletterManager.init();
-            
+
             console.log('Initializing FinalCTAManager...');
             FinalCTAManager.init();
-            
+
             console.log('Initializing ChatbotManager...');
             ChatbotManager.init();
-            
+
             console.log('Application initialized successfully');
         } catch (error) {
             console.error('Failed to initialize application:', error);
@@ -1625,7 +1733,7 @@ const ShowcaseGallery = {
 
         const image = slide.querySelector('.gallery-image');
         const badge = slide.querySelector('.gallery-badge');
-        
+
         if (!image) return;
 
         // Create modal for larger view
@@ -1722,7 +1830,7 @@ const ShowcaseManager = {
                 e.preventDefault();
                 const productName = bestsellerBtn.getAttribute('data-product');
                 const price = bestsellerBtn.getAttribute('data-price');
-                
+
                 if (productName && price) {
                     CartManager.addItem(productName, parseFloat(price));
                 }
@@ -1750,7 +1858,7 @@ const ShowcaseManager = {
         // Scroll to products section or show more details
         const productsSection = Utils.querySelector('.products-section');
         if (productsSection) {
-            productsSection.scrollIntoView({ 
+            productsSection.scrollIntoView({
                 behavior: 'smooth',
                 block: 'start'
             });
@@ -2126,7 +2234,7 @@ const NewsletterManager = {
      */
     handleNewsletterSubmission(formData) {
         const email = formData.get('email');
-        
+
         if (!this.validateEmail(email)) {
             Utils.showNotification('Please enter a valid email address', 'error');
             return;
@@ -2142,11 +2250,11 @@ const NewsletterManager = {
             // Simulate API call
             setTimeout(() => {
                 Utils.showNotification('Successfully subscribed to our newsletter! Check your email for exclusive offers.');
-                
+
                 // Reset form
                 const form = Utils.querySelector('#newsletter-form');
                 if (form) form.reset();
-                
+
                 // Reset button
                 submitBtn.textContent = originalText;
                 submitBtn.disabled = false;
@@ -2192,16 +2300,16 @@ const FinalCTAManager = {
         // Scroll to products section to start shopping
         const productsSection = Utils.querySelector('.products-section');
         if (productsSection) {
-            productsSection.scrollIntoView({ 
+            productsSection.scrollIntoView({
                 behavior: 'smooth',
                 block: 'start'
             });
             Utils.showNotification('Explore our premium collection below!');
         } else {
             // Fallback: scroll to top of page
-            window.scrollTo({ 
-                top: 0, 
-                behavior: 'smooth' 
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
             });
             Utils.showNotification('Welcome to Shoe Point! Start exploring our collection.');
         }
@@ -2213,13 +2321,13 @@ const ChatbotManager = {
     isOpen: false,
     messagesContainer: null,
     chatInput: null,
-    
+
     // WhatsApp integration settings
     whatsappConfig: {
         phoneNumber: '03322599947', // Your WhatsApp number
         enabled: true
     },
-    
+
     // Knowledge base for the AI responses
     knowledgeBase: {
         products: {
@@ -2278,7 +2386,7 @@ const ChatbotManager = {
     init() {
         this.messagesContainer = Utils.querySelector('#chat-messages');
         this.chatInput = Utils.querySelector('#chat-input');
-        
+
         if (!this.messagesContainer || !this.chatInput) {
             console.warn('Chatbot elements not found');
             return;
@@ -2356,7 +2464,7 @@ const ChatbotManager = {
 
         chatWindow.style.display = 'flex';
         this.isOpen = true;
-        
+
         // Focus input
         setTimeout(() => {
             if (this.chatInput) this.chatInput.focus();
@@ -2383,10 +2491,10 @@ const ChatbotManager = {
 
         // Add user message to chat
         this.addMessage(message, 'user');
-        
+
         // Send notification to WhatsApp (if enabled)
         this.sendWhatsAppNotification(message);
-        
+
         // Clear input
         this.chatInput.value = '';
 
@@ -2425,7 +2533,7 @@ const ChatbotManager = {
             this.addMessage(message, 'user');
             this.sendWhatsAppNotification(message);
             this.showTypingIndicator();
-            
+
             setTimeout(() => {
                 this.hideTypingIndicator();
                 const response = this.generateResponse(message);
@@ -2442,7 +2550,7 @@ const ChatbotManager = {
 
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${sender}-message`;
-        
+
         const now = new Date();
         const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
@@ -2462,7 +2570,7 @@ const ChatbotManager = {
      */
     generateResponse(userMessage) {
         const message = userMessage.toLowerCase();
-        
+
         // Check each category in knowledge base
         for (const [category, data] of Object.entries(this.knowledgeBase)) {
             for (const keyword of data.keywords) {
@@ -2533,7 +2641,7 @@ const ChatbotManager = {
         try {
             const timestamp = new Date().toLocaleString();
             const websiteUrl = window.location.href;
-            
+
             // Create WhatsApp message
             const whatsappMessage = `🔔 *New Customer Query - Shoe Point*\n\n` +
                 `*Time:* ${timestamp}\n` +
@@ -2543,14 +2651,14 @@ const ChatbotManager = {
 
             // Encode message for WhatsApp URL
             const encodedMessage = encodeURIComponent(whatsappMessage);
-            
+
             // Create WhatsApp Web URL
             const whatsappUrl = `https://wa.me/${this.whatsappConfig.phoneNumber}?text=${encodedMessage}`;
-            
+
             // Open WhatsApp in a new tab (silent notification)
             // Note: This will open WhatsApp but won't send automatically for privacy
             const whatsappWindow = window.open(whatsappUrl, '_blank', 'width=400,height=600');
-            
+
             // Close the WhatsApp window after 3 seconds (user can keep it open if needed)
             setTimeout(() => {
                 if (whatsappWindow && !whatsappWindow.closed) {
@@ -2559,7 +2667,7 @@ const ChatbotManager = {
             }, 3000);
 
             console.log('WhatsApp notification sent for message:', userMessage);
-            
+
         } catch (error) {
             console.error('Failed to send WhatsApp notification:', error);
         }
@@ -2570,26 +2678,26 @@ const ChatbotManager = {
      */
     connectToHuman() {
         this.addMessage('I want to speak with a human agent', 'user');
-        
+
         // Send WhatsApp notification for human agent request
         this.sendWhatsAppNotification('🚨 URGENT: Customer wants to speak with human agent');
-        
+
         this.showTypingIndicator();
-        
+
         setTimeout(() => {
             this.hideTypingIndicator();
-            
+
             const response = `I'm connecting you with our human support team! 👨‍💼\n\n` +
                 `Our team has been notified and will contact you shortly via WhatsApp at ${this.whatsappConfig.phoneNumber}.\n\n` +
                 `You can also directly message us on WhatsApp by clicking the button below:`;
-            
+
             this.addMessage(response, 'bot');
-            
+
             // Add WhatsApp direct contact button
             setTimeout(() => {
                 this.addWhatsAppContactButton();
             }, 500);
-            
+
         }, 1500);
     },
 
@@ -2601,7 +2709,7 @@ const ChatbotManager = {
 
         const buttonDiv = document.createElement('div');
         buttonDiv.className = 'message bot-message';
-        
+
         const now = new Date();
         const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
@@ -2643,9 +2751,9 @@ const ChatbotManager = {
         const message = `Hi! I was chatting on your Shoe Point website and would like to speak with a human agent. Can you please help me?`;
         const encodedMessage = encodeURIComponent(message);
         const whatsappUrl = `https://wa.me/${this.whatsappConfig.phoneNumber}?text=${encodedMessage}`;
-        
+
         window.open(whatsappUrl, '_blank');
-        
+
         Utils.showNotification('Opening WhatsApp... You can now chat directly with our team!');
     }
 };

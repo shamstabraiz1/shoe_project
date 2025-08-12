@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Debug - Shoe Point</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f7fa;
+        }
+        
+        .debug-container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .login-form {
+            margin-bottom: 30px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
+        }
+        
+        button:hover {
+            background: #2980b9;
+        }
+        
+        .debug-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        
+        .dashboard-preview {
+            display: none;
+            background: #e8f4f8;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        
+        .dashboard-preview.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="debug-container">
+        <h1>🔧 Admin Dashboard Debug</h1>
+        <p>This is a simplified version to test the login functionality.</p>
+        
+        <div class="login-form">
+            <h3>Login Test</h3>
+            <form id="debug-login-form">
+                <div class="form-group">
+                    <label for="username">Username:</label>
+                    <input type="text" id="username" value="admin" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Password:</label>
+                    <input type="password" id="password" value="shoepoint123" required>
+                </div>
+                
+                <button type="submit">Login</button>
+                <button type="button" onclick="testDirectLogin()">Direct Login Test</button>
+                <button type="button" onclick="clearStorage()">Clear Storage</button>
+            </form>
+        </div>
+        
+        <div id="debug-output" class="debug-info">
+            Ready to test login...
+        </div>
+        
+        <div id="dashboard-preview" class="dashboard-preview">
+            <h3>✅ Dashboard Preview</h3>
+            <p><strong>Login Successful!</strong></p>
+            <p>You would now see the full admin dashboard.</p>
+            <button onclick="window.open('admin.html', '_blank')">Open Full Admin Dashboard</button>
+            <button onclick="logout()">Logout</button>
+        </div>
+    </div>
+
+    <script>
+        // Debug configuration
+        const DEBUG_CONFIG = {
+            CREDENTIALS: {
+                username: 'admin',
+                password: 'shoepoint123'
+            },
+            STORAGE_KEY: 'shoepoint_admin_auth'
+        };
+        
+        // Debug output function
+        function debugLog(message, type = 'info') {
+            const output = document.getElementById('debug-output');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : '';
+            
+            output.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+            output.scrollTop = output.scrollHeight;
+            console.log(`[DEBUG] ${message}`);
+        }
+        
+        // Simple auth functions
+        function login(username, password) {
+            debugLog(`Attempting login with username: ${username}`);
+            
+            if (username === DEBUG_CONFIG.CREDENTIALS.username && 
+                password === DEBUG_CONFIG.CREDENTIALS.password) {
+                
+                const authData = {
+                    username: username,
+                    timestamp: Date.now(),
+                    sessionId: 'debug_' + Date.now()
+                };
+                
+                localStorage.setItem(DEBUG_CONFIG.STORAGE_KEY, JSON.stringify(authData));
+                debugLog('Login successful! Auth data saved to localStorage.', 'success');
+                return true;
+            } else {
+                debugLog('Login failed! Invalid credentials.', 'error');
+                return false;
+            }
+        }
+        
+        function isLoggedIn() {
+            const auth = localStorage.getItem(DEBUG_CONFIG.STORAGE_KEY);
+            if (!auth) {
+                debugLog('No auth data found in localStorage.');
+                return false;
+            }
+            
+            try {
+                const authData = JSON.parse(auth);
+                const now = Date.now();
+                const isValid = authData.timestamp && (now - authData.timestamp) < 24 * 60 * 60 * 1000;
+                
+                debugLog(`Auth data found. Valid: ${isValid}`);
+                return isValid;
+            } catch (error) {
+                debugLog(`Error parsing auth data: ${error.message}`, 'error');
+                return false;
+            }
+        }
+        
+        function logout() {
+            localStorage.removeItem(DEBUG_CONFIG.STORAGE_KEY);
+            debugLog('Logged out successfully.');
+            document.getElementById('dashboard-preview').classList.remove('show');
+        }
+        
+        function clearStorage() {
+            localStorage.clear();
+            debugLog('All localStorage cleared.');
+            document.getElementById('dashboard-preview').classList.remove('show');
+        }
+        
+        function testDirectLogin() {
+            debugLog('Testing direct login...');
+            if (login('admin', 'shoepoint123')) {
+                showDashboard();
+            }
+        }
+        
+        function showDashboard() {
+            document.getElementById('dashboard-preview').classList.add('show');
+            debugLog('Dashboard would be shown now.', 'success');
+        }
+        
+        // Form submission handler
+        document.getElementById('debug-login-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            debugLog('Form submitted');
+            
+            if (login(username, password)) {
+                showDashboard();
+            }
+        });
+        
+        // Check login status on load
+        window.addEventListener('load', function() {
+            debugLog('Page loaded. Checking login status...');
+            
+            if (isLoggedIn()) {
+                debugLog('User is already logged in.', 'success');
+                showDashboard();
+            } else {
+                debugLog('User is not logged in.');
+            }
+        });
+    </script>
+</body>
+</html>

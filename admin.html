@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shoe Point - Admin Dashboard</title>
+    <link rel="stylesheet" href="admin-styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,wght@0,400;0,600;0,900;1,400;1,600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Login Screen -->
+    <div id="login-screen" class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <h1>👟 Shoe Point</h1>
+                <h2>Admin Dashboard</h2>
+                <p>Manage your store with ease</p>
+            </div>
+            
+            <form id="admin-login-form" class="login-form">
+                <div class="form-group">
+                    <label for="admin-username">Username</label>
+                    <input type="text" id="admin-username" name="username" placeholder="Enter your username" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="admin-password">Password</label>
+                    <input type="password" id="admin-password" name="password" placeholder="Enter your password" required>
+                </div>
+                
+                <button type="submit" class="login-btn">
+                    <span class="login-text">Login to Dashboard</span>
+                    <span class="login-spinner" style="display: none;">Logging in...</span>
+                </button>
+                
+                <div class="login-demo">
+                    <p><strong>Demo Credentials:</strong></p>
+                    <p>Username: <code>admin</code></p>
+                    <p>Password: <code>shoepoint123</code></p>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Admin Dashboard -->
+    <div id="admin-dashboard" class="dashboard-container" style="display: none;">
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <h2>👟 Shoe Point</h2>
+                <p>Admin Panel</p>
+            </div>
+            
+            <ul class="sidebar-menu">
+                <li class="menu-item active" data-section="overview">
+                    <span class="menu-icon">📊</span>
+                    <span class="menu-text">Overview</span>
+                </li>
+                <li class="menu-item" data-section="products">
+                    <span class="menu-icon">👟</span>
+                    <span class="menu-text">Products</span>
+                </li>
+                <li class="menu-item" data-section="orders">
+                    <span class="menu-icon">📦</span>
+                    <span class="menu-text">Orders</span>
+                </li>
+                <li class="menu-item" data-section="customers">
+                    <span class="menu-icon">👥</span>
+                    <span class="menu-text">Customers</span>
+                </li>
+                <li class="menu-item" data-section="analytics">
+                    <span class="menu-icon">📈</span>
+                    <span class="menu-text">Analytics</span>
+                </li>
+                <li class="menu-item" data-section="settings">
+                    <span class="menu-icon">⚙️</span>
+                    <span class="menu-text">Settings</span>
+                </li>
+            </ul>
+            
+            <div class="sidebar-footer">
+                <button id="logout-btn" class="logout-btn">
+                    <span class="menu-icon">🚪</span>
+                    <span class="menu-text">Logout</span>
+                </button>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="dashboard-header">
+                <div class="header-left">
+                    <h1 id="page-title">Dashboard Overview</h1>
+                    <p id="page-subtitle">Welcome back! Here's what's happening with your store.</p>
+                </div>
+                <div class="header-right">
+                    <button class="header-btn" onclick="window.open('index-enhanced.html', '_blank')">
+                        🌐 View Store
+                    </button>
+                    <div class="admin-profile">
+                        <span class="admin-name">Admin</span>
+                        <div class="admin-avatar">A</div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Dashboard Sections -->
+            
+            <!-- Overview Section -->
+            <section id="overview-section" class="dashboard-section active">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">💰</div>
+                        <div class="stat-content">
+                            <h3>Total Revenue</h3>
+                            <p class="stat-value" id="total-revenue">Rs.0</p>
+                            <span class="stat-change positive">+12% from last month</span>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">📦</div>
+                        <div class="stat-content">
+                            <h3>Total Orders</h3>
+                            <p class="stat-value" id="total-orders">0</p>
+                            <span class="stat-change positive">+8% from last month</span>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">👟</div>
+                        <div class="stat-content">
+                            <h3>Products</h3>
+                            <p class="stat-value" id="total-products">6</p>
+                            <span class="stat-change neutral">Active products</span>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">👥</div>
+                        <div class="stat-content">
+                            <h3>Customers</h3>
+                            <p class="stat-value" id="total-customers">0</p>
+                            <span class="stat-change positive">New this month</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="dashboard-widgets">
+                    <div class="widget">
+                        <h3>Recent Orders</h3>
+                        <div id="recent-orders" class="recent-orders">
+                            <p class="no-data">No orders yet. Orders will appear here once customers start purchasing.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="widget">
+                        <h3>Quick Actions</h3>
+                        <div class="quick-actions">
+                            <button class="action-btn" onclick="AdminDashboard.switchSection('products')">
+                                <span class="action-icon">➕</span>
+                                Add New Product
+                            </button>
+                            <button class="action-btn" onclick="AdminDashboard.switchSection('orders')">
+                                <span class="action-icon">📦</span>
+                                View All Orders
+                            </button>
+                            <button class="action-btn" onclick="AdminDashboard.switchSection('settings')">
+                                <span class="action-icon">⚙️</span>
+                                Store Settings
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Products Section -->
+            <section id="products-section" class="dashboard-section">
+                <div class="section-header">
+                    <div class="section-title">
+                        <h2>Product Management</h2>
+                        <p>Manage your shoe inventory, prices, and details</p>
+                    </div>
+                    <button id="add-product-btn" class="primary-btn">
+                        <span class="btn-icon">➕</span>
+                        Add New Product
+                    </button>
+                </div>
+                
+                <div class="products-grid" id="admin-products-grid">
+                    <!-- Products will be loaded here -->
+                </div>
+            </section>
+
+            <!-- Orders Section -->
+            <section id="orders-section" class="dashboard-section">
+                <div class="section-header">
+                    <div class="section-title">
+                        <h2>Order Management</h2>
+                        <p>Track and manage customer orders</p>
+                    </div>
+                    <div class="section-filters">
+                        <select id="order-status-filter">
+                            <option value="all">All Orders</option>
+                            <option value="pending">Pending</option>
+                            <option value="confirmed">Confirmed</option>
+                            <option value="processing">Processing</option>
+                            <option value="shipped">Shipped</option>
+                            <option value="delivered">Delivered</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="orders-table" id="orders-table">
+                    <!-- Orders will be loaded here -->
+                </div>
+            </section>
+
+            <!-- Customers Section -->
+            <section id="customers-section" class="dashboard-section">
+                <div class="section-header">
+                    <div class="section-title">
+                        <h2>Customer Management</h2>
+                        <p>View and manage your customers</p>
+                    </div>
+                </div>
+                
+                <div class="customers-table" id="customers-table">
+                    <!-- Customers will be loaded here -->
+                </div>
+            </section>
+
+            <!-- Analytics Section -->
+            <section id="analytics-section" class="dashboard-section">
+                <div class="section-header">
+                    <div class="section-title">
+                        <h2>Analytics & Reports</h2>
+                        <p>Track your store performance and insights</p>
+                    </div>
+                </div>
+                
+                <div class="analytics-content">
+                    <div class="chart-container">
+                        <h3>Sales Overview</h3>
+                        <div id="sales-chart" class="chart-placeholder">
+                            📈 Sales chart will be displayed here
+                        </div>
+                    </div>
+                    
+                    <div class="analytics-stats">
+                        <h3>Performance Metrics</h3>
+                        <div class="metrics-grid">
+                            <div class="metric-item">
+                                <span class="metric-label">Conversion Rate</span>
+                                <span class="metric-value">2.4%</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">Average Order Value</span>
+                                <span class="metric-value">Rs.4,200</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">Return Rate</span>
+                                <span class="metric-value">1.2%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Settings Section -->
+            <section id="settings-section" class="dashboard-section">
+                <div class="section-header">
+                    <div class="section-title">
+                        <h2>Store Settings</h2>
+                        <p>Configure your store preferences and payment settings</p>
+                    </div>
+                </div>
+                
+                <div class="settings-content">
+                    <div class="settings-group">
+                        <h3>Payment Settings</h3>
+                        <div class="setting-item">
+                            <label for="paypal-client-id">PayPal Client ID</label>
+                            <input type="text" id="paypal-client-id" placeholder="Enter PayPal Client ID">
+                        </div>
+                        <div class="setting-item">
+                            <label for="stripe-key">Stripe Publishable Key</label>
+                            <input type="text" id="stripe-key" placeholder="Enter Stripe Publishable Key">
+                        </div>
+                    </div>
+                    
+                    <div class="settings-group">
+                        <h3>Store Information</h3>
+                        <div class="setting-item">
+                            <label for="store-name">Store Name</label>
+                            <input type="text" id="store-name" value="Shoe Point">
+                        </div>
+                        <div class="setting-item">
+                            <label for="store-address">Store Address</label>
+                            <input type="text" id="store-address" value="Chella Chock Muzaffarabad AJK">
+                        </div>
+                    </div>
+                    
+                    <button class="primary-btn">Save Settings</button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Product Modal -->
+    <div id="product-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="product-modal-title">Add New Product</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="product-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="product-name">Product Name *</label>
+                            <input type="text" id="product-name" name="name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="product-price">Price (Rs) *</label>
+                            <input type="number" id="product-price" name="price" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="product-description">Description</label>
+                        <textarea id="product-description" name="description" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="product-category">Category</label>
+                            <select id="product-category" name="category">
+                                <option value="running">Running Shoes</option>
+                                <option value="basketball">Basketball Shoes</option>
+                                <option value="soccer">Soccer Cleats</option>
+                                <option value="tennis">Tennis Shoes</option>
+                                <option value="hiking">Hiking Shoes</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="product-image">Image File</label>
+                            <input type="file" id="product-image" name="image" accept="image/*">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Available Sizes</label>
+                        <div class="size-checkboxes">
+                            <label><input type="checkbox" name="sizes" value="7"> Size 7</label>
+                            <label><input type="checkbox" name="sizes" value="8"> Size 8</label>
+                            <label><input type="checkbox" name="sizes" value="9"> Size 9</label>
+                            <label><input type="checkbox" name="sizes" value="10"> Size 10</label>
+                        </div>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="button" class="secondary-btn" onclick="AdminDashboard.closeProductModal()">Cancel</button>
+                        <button type="submit" class="primary-btn">Save Product</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="admin-script.js"></script>
+</body>
+</html>""

@@ -1,7 +1,6 @@
 /**
- * Shoe Point E-commerce Website
- * Enhanced JavaScript with proper error handling and organization
- */
+ Shoe Point E-commerce Website
+ **/
 
 console.log('Script loaded successfully');
 
@@ -461,7 +460,7 @@ const PaymentManager = {
         try {
             if (typeof Stripe !== 'undefined') {
                 // Check if we have a valid Stripe key
-                if (CONFIG.PAYMENT.STRIPE.PUBLISHABLE_KEY && 
+                if (CONFIG.PAYMENT.STRIPE.PUBLISHABLE_KEY &&
                     CONFIG.PAYMENT.STRIPE.PUBLISHABLE_KEY.startsWith('pk_') &&
                     CONFIG.PAYMENT.STRIPE.PUBLISHABLE_KEY.length > 20) {
                     this.stripe = Stripe(CONFIG.PAYMENT.STRIPE.PUBLISHABLE_KEY);
@@ -665,7 +664,7 @@ const PaymentManager = {
     initializeStripeCard() {
         const cardContainer = Utils.querySelector('#stripe-card-element');
         const form = Utils.querySelector('#stripe-payment-form');
-        
+
         if (!cardContainer || !form) {
             console.error('Stripe card container or form not found');
             return;
@@ -724,7 +723,7 @@ const PaymentManager = {
     createFallbackCardForm() {
         const cardContainer = Utils.querySelector('#stripe-card-element');
         const form = Utils.querySelector('#stripe-payment-form');
-        
+
         if (!cardContainer || !form) return;
 
         // Create fallback card input fields
@@ -984,7 +983,7 @@ const PaymentManager = {
                 });
                 channel.close();
             }
-            
+
             // Also store in localStorage for admin to pick up
             const notifications = JSON.parse(localStorage.getItem('admin_notifications') || '[]');
             notifications.push({
@@ -994,7 +993,7 @@ const PaymentManager = {
                 read: false
             });
             localStorage.setItem('admin_notifications', JSON.stringify(notifications));
-            
+
         } catch (error) {
             console.log('Could not notify admin dashboard:', error);
         }
@@ -2168,7 +2167,7 @@ const TestimonialsCarousel = {
     direction: 1, // 1 for right, -1 for left
     isAutoScrolling: true,
     isMobile: false,
-    
+
     // Touch/swipe properties
     startX: 0,
     currentX: 0,
@@ -2194,7 +2193,7 @@ const TestimonialsCarousel = {
         this.updateDotsVisibility();
         this.startAutoScroll();
         this.updateVisibleCards();
-        
+
         // Listen for resize events
         window.addEventListener('resize', Utils.debounce(() => {
             this.checkMobile();
@@ -2293,12 +2292,12 @@ const TestimonialsCarousel = {
         this.startX = e.touches[0].clientX;
         this.isDragging = true;
         this.stopAutoScroll();
-        
+
         // Get current transform value
         const transform = this.track.style.transform;
         const match = transform.match(/translateX\((-?\d+(?:\.\d+)?)%\)/);
         this.startTransform = match ? parseFloat(match[1]) : 0;
-        
+
         this.track.style.transition = 'none';
     },
 
@@ -2307,13 +2306,13 @@ const TestimonialsCarousel = {
      */
     handleTouchMove(e) {
         if (!this.isMobile || !this.isDragging) return;
-        
+
         e.preventDefault();
         this.currentX = e.touches[0].clientX;
         const diffX = this.currentX - this.startX;
         const cardWidth = this.track.offsetWidth / this.totalSlides;
         const movePercent = (diffX / cardWidth) * (100 / this.totalSlides);
-        
+
         const newTransform = this.startTransform + movePercent;
         this.track.style.transform = `translateX(${newTransform}%)`;
     },
@@ -2323,13 +2322,13 @@ const TestimonialsCarousel = {
      */
     handleTouchEnd(e) {
         if (!this.isMobile || !this.isDragging) return;
-        
+
         this.isDragging = false;
         this.track.style.transition = 'transform 0.3s ease-out';
-        
+
         const diffX = this.currentX - this.startX;
         const threshold = 50; // Minimum swipe distance
-        
+
         if (Math.abs(diffX) > threshold) {
             if (diffX > 0) {
                 this.previousSlide();
@@ -2340,7 +2339,7 @@ const TestimonialsCarousel = {
             // Snap back to current position
             this.updateTrackPosition();
         }
-        
+
         setTimeout(() => this.startAutoScroll(), 3000);
     },
 
@@ -2398,7 +2397,7 @@ const TestimonialsCarousel = {
             // Desktop: show group dots (0 for cards 1-3, 1 for cards 4-6)
             activeDotIndex = index;
         }
-        
+
         if (this.dots[activeDotIndex]) {
             this.dots[activeDotIndex].classList.add('active');
             this.dots[activeDotIndex].setAttribute('aria-selected', 'true');
@@ -2456,7 +2455,7 @@ const TestimonialsCarousel = {
      */
     updateTrackPosition() {
         let translateX;
-        
+
         if (this.isMobile) {
             // Mobile: move by 100/6 = 16.67% for each card
             translateX = -this.currentIndex * (100 / this.totalSlides);
@@ -2464,7 +2463,7 @@ const TestimonialsCarousel = {
             // Desktop: move by 50% for each position (position 0: cards 1-3, position 1: cards 4-6)
             translateX = -this.currentIndex * 50;
         }
-        
+
         this.track.style.transform = `translateX(${translateX}%)`;
     },
 

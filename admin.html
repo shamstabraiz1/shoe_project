@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,8 +8,11 @@
     <link rel="stylesheet" href="admin-styles.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,wght@0,400;0,600;0,900;1,400;1,600&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,wght@0,400;0,600;0,900;1,400;1,600&display=swap"
+        rel="stylesheet">
 </head>
+
 <body>
     <!-- Login Screen -->
     <div id="login-screen" class="login-container">
@@ -18,23 +22,29 @@
                 <h2>Admin Dashboard</h2>
                 <p>Manage your store with ease</p>
             </div>
-            
+
             <form id="admin-login-form" class="login-form">
                 <div class="form-group">
                     <label for="admin-username">Username</label>
                     <input type="text" id="admin-username" name="username" placeholder="Enter your username" required>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="admin-password">Password</label>
-                    <input type="password" id="admin-password" name="password" placeholder="Enter your password" required>
+                    <input type="password" id="admin-password" name="password" placeholder="Enter your password"
+                        required>
                 </div>
-                
+
                 <button type="submit" class="login-btn">
                     <span class="login-text">Login to Dashboard</span>
                     <span class="login-spinner" style="display: none;">Logging in...</span>
                 </button>
-                
+
+                <button type="button" onclick="testDirectLogin()" class="login-btn"
+                    style="background: #28a745; margin-top: 10px;">
+                    Quick Test Login
+                </button>
+
                 <div class="login-demo">
                     <p><strong>Demo Credentials:</strong></p>
                     <p>Username: <code>admin</code></p>
@@ -52,7 +62,7 @@
                 <h2>👟 Shoe Point</h2>
                 <p>Admin Panel</p>
             </div>
-            
+
             <ul class="sidebar-menu">
                 <li class="menu-item active" data-section="overview">
                     <span class="menu-icon">📊</span>
@@ -70,6 +80,10 @@
                     <span class="menu-icon">👥</span>
                     <span class="menu-text">Customers</span>
                 </li>
+                <li class="menu-item" data-section="physical-sales">
+                    <span class="menu-icon">🏪</span>
+                    <span class="menu-text">Physical Sales</span>
+                </li>
                 <li class="menu-item" data-section="analytics">
                     <span class="menu-icon">📈</span>
                     <span class="menu-text">Analytics</span>
@@ -79,7 +93,7 @@
                     <span class="menu-text">Settings</span>
                 </li>
             </ul>
-            
+
             <div class="sidebar-footer">
                 <button id="logout-btn" class="logout-btn">
                     <span class="menu-icon">🚪</span>
@@ -108,19 +122,28 @@
             </header>
 
             <!-- Dashboard Sections -->
-            
+
             <!-- Overview Section -->
             <section id="overview-section" class="dashboard-section active">
                 <div class="stats-grid">
                     <div class="stat-card">
                         <div class="stat-icon">💰</div>
                         <div class="stat-content">
-                            <h3>Total Revenue</h3>
+                            <h3>Online Revenue</h3>
                             <p class="stat-value" id="total-revenue">Rs.0</p>
                             <span class="stat-change positive">+12% from last month</span>
                         </div>
                     </div>
-                    
+
+                    <div class="stat-card">
+                        <div class="stat-icon">🏪</div>
+                        <div class="stat-content">
+                            <h3>Physical Sales</h3>
+                            <p class="stat-value" id="physical-revenue">Rs.0</p>
+                            <span class="stat-change" id="physical-transactions">0 transactions</span>
+                        </div>
+                    </div>
+
                     <div class="stat-card">
                         <div class="stat-icon">📦</div>
                         <div class="stat-content">
@@ -129,34 +152,26 @@
                             <span class="stat-change positive">+8% from last month</span>
                         </div>
                     </div>
-                    
+
                     <div class="stat-card">
-                        <div class="stat-icon">👟</div>
+                        <div class="stat-icon">📊</div>
                         <div class="stat-content">
-                            <h3>Products</h3>
-                            <p class="stat-value" id="total-products">6</p>
-                            <span class="stat-change neutral">Active products</span>
-                        </div>
-                    </div>
-                    
-                    <div class="stat-card">
-                        <div class="stat-icon">👥</div>
-                        <div class="stat-content">
-                            <h3>Customers</h3>
-                            <p class="stat-value" id="total-customers">0</p>
-                            <span class="stat-change positive">New this month</span>
+                            <h3>Stock Status</h3>
+                            <p class="stat-value" id="total-stock">0</p>
+                            <span class="stat-change" id="stock-alerts">All in stock</span>
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="dashboard-widgets">
                     <div class="widget">
                         <h3>Recent Orders</h3>
                         <div id="recent-orders" class="recent-orders">
-                            <p class="no-data">No orders yet. Orders will appear here once customers start purchasing.</p>
+                            <p class="no-data">No orders yet. Orders will appear here once customers start purchasing.
+                            </p>
                         </div>
                     </div>
-                    
+
                     <div class="widget">
                         <h3>Quick Actions</h3>
                         <div class="quick-actions">
@@ -172,6 +187,99 @@
                                 <span class="action-icon">⚙️</span>
                                 Store Settings
                             </button>
+                        </div>
+
+                        <!-- Physical Sales Management -->
+                        <div class="physical-sales-section">
+                            <div class="physical-sales-header">
+                                <h4>🏪 Physical Store Management</h4>
+                                <button onclick="showAddProductModal()" class="add-product-btn">➕ Add Product</button>
+                            </div>
+
+                            <!-- Quick Actions -->
+                            <div class="quick-actions-row">
+                                <!-- Quick Sell Form -->
+                                <div class="quick-sell-form">
+                                    <h5>Quick Sale</h5>
+                                    <select id="dashboard-product-select" class="form-select"
+                                        onchange="loadDashboardProductOptions()">
+                                        <option value="">Select product to sell...</option>
+                                    </select>
+
+                                    <div class="product-options" id="dashboard-product-options" style="display: none;">
+                                        <select id="dashboard-size-select" class="form-select size-select">
+                                            <option value="">Select size...</option>
+                                        </select>
+
+                                        <select id="dashboard-color-select" class="form-select color-select">
+                                            <option value="">Select color...</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="sell-controls">
+                                        <input type="number" id="dashboard-quantity-input" min="1" max="10" value="1"
+                                            class="quantity-input" placeholder="Qty">
+                                        <button onclick="processDashboardSale()" class="sell-btn">💰 Sell Now</button>
+                                    </div>
+                                </div>
+
+                                <!-- Quick Return Form -->
+                                <div class="quick-return-form">
+                                    <h5>Process Return</h5>
+                                    <select id="return-sale-select" class="form-select" onchange="loadReturnDetails()">
+                                        <option value="">Select sale to return...</option>
+                                    </select>
+
+                                    <div class="return-details" id="return-details" style="display: none;">
+                                        <div class="return-info" id="return-info"></div>
+                                        <input type="number" id="return-quantity-input" min="1" value="1"
+                                            class="quantity-input" placeholder="Return Qty">
+                                        <button onclick="processReturn()" class="return-btn">🔄 Process Return</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Product Management -->
+                            <div class="product-management">
+                                <div class="inventory-header">
+                                    <h5>Product Inventory</h5>
+                                    <div class="inventory-filters">
+                                        <input type="text" id="product-search" placeholder="Search products..."
+                                            class="search-input" oninput="filterDashboardInventory()">
+                                        <select id="category-filter" class="filter-select"
+                                            onchange="filterDashboardInventory()">
+                                            <option value="">All Categories</option>
+                                            <option value="Running">Running</option>
+                                            <option value="Basketball">Basketball</option>
+                                            <option value="Soccer">Soccer</option>
+                                            <option value="Tennis">Tennis</option>
+                                            <option value="Hiking">Hiking</option>
+                                            <option value="Uncategorized">Uncategorized</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div id="dashboard-inventory-list" class="inventory-list">
+                                    <!-- Products will be loaded here -->
+                                </div>
+                            </div>
+
+                            <!-- Recent Sales & Stock Status -->
+                            <div class="sales-info">
+                                <div class="recent-sales-mini">
+                                    <h5>Recent Sales</h5>
+                                    <div id="recent-physical-sales" class="sales-list">
+                                        <p class="no-data">No sales yet.</p>
+                                    </div>
+                                    <button onclick="clearSalesLog()" class="clear-sales-btn">Clear History</button>
+                                </div>
+
+                                <div class="stock-status-mini">
+                                    <h5>Stock Alerts</h5>
+                                    <div id="stock-alerts-widget" class="alerts-list">
+                                        <p class="no-data">All in stock.</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -189,7 +297,7 @@
                         Add New Product
                     </button>
                 </div>
-                
+
                 <div class="products-grid" id="admin-products-grid">
                     <!-- Products will be loaded here -->
                 </div>
@@ -213,7 +321,7 @@
                         </select>
                     </div>
                 </div>
-                
+
                 <div class="orders-table" id="orders-table">
                     <!-- Orders will be loaded here -->
                 </div>
@@ -227,7 +335,7 @@
                         <p>View and manage your customers</p>
                     </div>
                 </div>
-                
+
                 <div class="customers-table" id="customers-table">
                     <!-- Customers will be loaded here -->
                 </div>
@@ -241,7 +349,7 @@
                         <p>Track your store performance and insights</p>
                     </div>
                 </div>
-                
+
                 <div class="analytics-content">
                     <div class="chart-container">
                         <h3>Sales Overview</h3>
@@ -249,7 +357,7 @@
                             📈 Sales chart will be displayed here
                         </div>
                     </div>
-                    
+
                     <div class="analytics-stats">
                         <h3>Performance Metrics</h3>
                         <div class="metrics-grid">
@@ -270,6 +378,127 @@
                 </div>
             </section>
 
+            <!-- Physical Sales Section -->
+            <section id="physical-sales-section" class="dashboard-section">
+                <div class="section-header">
+                    <div class="section-title">
+                        <h2>Physical Store Management</h2>
+                        <p>Manage your physical store inventory, sales, and product catalog</p>
+                    </div>
+                    <div class="section-actions">
+                        <button onclick="showAddProductModal()" class="primary-btn">
+                            <span class="action-icon">➕</span>
+                            Add New Product
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Sales Summary -->
+                <div class="sales-summary" id="sales-summary">
+                    <!-- Summary will be loaded here -->
+                </div>
+
+                <div class="physical-sales-content">
+                    <!-- Inventory Management -->
+                    <div class="inventory-section">
+                        <div class="section-tabs">
+                            <button class="tab-btn active" onclick="switchPhysicalTab('inventory')">📦
+                                Inventory</button>
+                            <button class="tab-btn" onclick="switchPhysicalTab('sales')">💰 Sales</button>
+                            <button class="tab-btn" onclick="switchPhysicalTab('history')">📊 History</button>
+                        </div>
+
+                        <!-- Inventory Tab -->
+                        <div id="inventory-tab" class="tab-content active">
+                            <div class="inventory-controls">
+                                <div class="search-filter">
+                                    <input type="text" id="physical-product-search" placeholder="Search products..."
+                                        class="search-input" oninput="filterPhysicalInventory()">
+                                    <select id="physical-category-filter" class="filter-select"
+                                        onchange="filterPhysicalInventory()">
+                                        <option value="">All Categories</option>
+                                        <option value="Running">Running</option>
+                                        <option value="Basketball">Basketball</option>
+                                        <option value="Soccer">Soccer</option>
+                                        <option value="Tennis">Tennis</option>
+                                        <option value="Hiking">Hiking</option>
+                                        <option value="Uncategorized">Uncategorized</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="inventory-grid" id="inventory-grid">
+                                <!-- Inventory items will be loaded here -->
+                            </div>
+                        </div>
+
+                        <!-- Sales Tab -->
+                        <div id="sales-tab" class="tab-content">
+                            <div class="quick-sale-section">
+                                <h3>Process Sale</h3>
+                                <div class="sale-form-container">
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label for="sale-product-select">Select Product</label>
+                                            <select id="sale-product-select" onchange="loadProductOptions()">
+                                                <option value="">Choose a product...</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="product-options-row" id="product-options-row" style="display: none;">
+                                        <div class="form-group">
+                                            <label for="sale-size-select">Size</label>
+                                            <select id="sale-size-select">
+                                                <option value="">Select size...</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="sale-color-select">Color</label>
+                                            <select id="sale-color-select">
+                                                <option value="">Select color...</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="sale-quantity-input">Quantity</label>
+                                            <input type="number" id="sale-quantity-input" min="1" max="50" value="1">
+                                        </div>
+                                    </div>
+
+                                    <div class="sale-actions">
+                                        <button type="button" onclick="processSale()" class="primary-btn sell-btn">
+                                            💰 Process Sale
+                                        </button>
+                                        <button type="button" onclick="clearSaleForm()" class="secondary-btn">
+                                            Clear Form
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- History Tab -->
+                        <div id="history-tab" class="tab-content">
+                            <div class="sales-history-section">
+                                <div class="history-controls">
+                                    <div class="history-filters">
+                                        <input type="date" id="date-from" class="date-input">
+                                        <input type="date" id="date-to" class="date-input">
+                                        <button onclick="filterSalesHistory()" class="secondary-btn">Filter</button>
+                                        <button onclick="clearSalesLog()" class="danger-btn">Clear All History</button>
+                                    </div>
+                                </div>
+                                <div id="sales-log" class="sales-log">
+                                    <!-- Sales will be logged here -->
+                                </div>
+                                <div class="sales-actions">
+                                    <button onclick="exportSalesData()" class="primary-btn">Export Sales Data</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             <!-- Settings Section -->
             <section id="settings-section" class="dashboard-section">
                 <div class="section-header">
@@ -278,7 +507,7 @@
                         <p>Configure your store preferences and payment settings</p>
                     </div>
                 </div>
-                
+
                 <div class="settings-content">
                     <div class="settings-group">
                         <h3>Payment Settings</h3>
@@ -291,7 +520,7 @@
                             <input type="text" id="stripe-key" placeholder="Enter Stripe Publishable Key">
                         </div>
                     </div>
-                    
+
                     <div class="settings-group">
                         <h3>Store Information</h3>
                         <div class="setting-item">
@@ -303,11 +532,119 @@
                             <input type="text" id="store-address" value="Chella Chock Muzaffarabad AJK">
                         </div>
                     </div>
-                    
+
                     <button class="primary-btn">Save Settings</button>
                 </div>
             </section>
         </main>
+    </div>
+
+    <!-- Physical Product Modal -->
+    <div id="physical-product-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="physical-product-modal-title">Add New Physical Product</h3>
+                <button class="modal-close" onclick="closePhysicalProductModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="physical-product-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="physical-product-name">Product Name *</label>
+                            <input type="text" id="physical-product-name" name="name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="physical-product-price">Price (Rs) *</label>
+                            <input type="number" id="physical-product-price" name="price" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="physical-product-description" class="optional">Description</label>
+                        <textarea id="physical-product-description" name="description" rows="3"></textarea>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="physical-product-category" class="optional">Category</label>
+                            <select id="physical-product-category" name="category">
+                                <option value="">Select Category (Optional)</option>
+                                <option value="Running">Running</option>
+                                <option value="Basketball">Basketball</option>
+                                <option value="Soccer">Soccer</option>
+                                <option value="Tennis">Tennis</option>
+                                <option value="Hiking">Hiking</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="physical-product-stock">Initial Stock *</label>
+                            <input type="number" id="physical-product-stock" name="stock" min="0" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="physical-product-image" class="optional">Image URL</label>
+                        <input type="text" id="physical-product-image" name="image" placeholder="e.g., shoe1.webp">
+                    </div>
+
+                    <!-- Sizes Section -->
+                    <div class="form-group">
+                        <label>Available Sizes *</label>
+                        <div class="checkbox-group" id="sizes-group">
+                            <label class="checkbox-item">
+                                <input type="checkbox" name="sizes" value="7"> Size 7
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" name="sizes" value="8"> Size 8
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" name="sizes" value="9"> Size 9
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" name="sizes" value="10"> Size 10
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" name="sizes" value="11"> Size 11
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" name="sizes" value="12"> Size 12
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Colors Section -->
+                    <div class="form-group">
+                        <label>Available Colors *</label>
+                        <div class="checkbox-group" id="colors-group">
+                            <label class="checkbox-item">
+                                <input type="checkbox" name="colors" value="Black"> Black
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" name="colors" value="White"> White
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" name="colors" value="Red"> Red
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" name="colors" value="Blue"> Blue
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" name="colors" value="Gray"> Gray
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" name="colors" value="Brown"> Brown
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button type="button" onclick="closePhysicalProductModal()"
+                            class="secondary-btn">Cancel</button>
+                        <button type="submit" class="primary-btn">Save Product</button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 
     <!-- Product Modal -->
@@ -329,12 +666,12 @@
                             <input type="number" id="product-price" name="price" required>
                         </div>
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="product-description">Description</label>
                         <textarea id="product-description" name="description" rows="3"></textarea>
                     </div>
-                    
+
                     <div class="form-row">
                         <div class="form-group">
                             <label for="product-category">Category</label>
@@ -351,7 +688,7 @@
                             <input type="file" id="product-image" name="image" accept="image/*">
                         </div>
                     </div>
-                    
+
                     <div class="form-group">
                         <label>Available Sizes</label>
                         <div class="size-checkboxes">
@@ -361,9 +698,10 @@
                             <label><input type="checkbox" name="sizes" value="10"> Size 10</label>
                         </div>
                     </div>
-                    
+
                     <div class="form-actions">
-                        <button type="button" class="secondary-btn" onclick="AdminDashboard.closeProductModal()">Cancel</button>
+                        <button type="button" class="secondary-btn"
+                            onclick="AdminDashboard.closeProductModal()">Cancel</button>
                         <button type="submit" class="primary-btn">Save Product</button>
                     </div>
                 </form>
@@ -373,4 +711,5 @@
 
     <script src="admin-script.js"></script>
 </body>
+
 </html>""

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,28 +13,28 @@
             padding: 20px;
             background: #f5f7fa;
         }
-        
+
         .debug-container {
             background: white;
             padding: 30px;
             border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
-        
+
         .login-form {
             margin-bottom: 30px;
         }
-        
+
         .form-group {
             margin-bottom: 15px;
         }
-        
+
         label {
             display: block;
             margin-bottom: 5px;
             font-weight: bold;
         }
-        
+
         input {
             width: 100%;
             padding: 10px;
@@ -41,7 +42,7 @@
             border-radius: 4px;
             font-size: 14px;
         }
-        
+
         button {
             background: #3498db;
             color: white;
@@ -52,11 +53,11 @@
             font-size: 14px;
             margin: 5px;
         }
-        
+
         button:hover {
             background: #2980b9;
         }
-        
+
         .debug-info {
             background: #f8f9fa;
             padding: 15px;
@@ -65,7 +66,7 @@
             font-family: monospace;
             font-size: 12px;
         }
-        
+
         .success {
             background: #d4edda;
             color: #155724;
@@ -73,7 +74,7 @@
             border-radius: 4px;
             margin: 10px 0;
         }
-        
+
         .error {
             background: #f8d7da;
             color: #721c24;
@@ -81,7 +82,7 @@
             border-radius: 4px;
             margin: 10px 0;
         }
-        
+
         .dashboard-preview {
             display: none;
             background: #e8f4f8;
@@ -89,17 +90,163 @@
             border-radius: 8px;
             margin-top: 20px;
         }
-        
+
         .dashboard-preview.show {
             display: block;
         }
+
+
+
+        .inventory-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .inventory-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .inventory-item h5 {
+            margin: 0 0 10px 0;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .inventory-details {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .stock-info {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .stock-count {
+            font-weight: bold;
+            color: #28a745;
+        }
+
+        .stock-count.low {
+            color: #ffc107;
+        }
+
+        .stock-count.out {
+            color: #dc3545;
+        }
+
+        .sell-btn {
+            background: #28a745;
+            font-size: 12px;
+            padding: 6px 12px;
+        }
+
+        .sell-btn:hover {
+            background: #218838;
+        }
+
+        .sell-btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+
+        .quick-sale-form {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .form-row select,
+        .form-row input {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .form-row input[type="number"] {
+            max-width: 80px;
+        }
+
+        .sales-history {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        .sales-log {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            padding: 10px;
+        }
+
+        .sale-entry {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+            font-size: 12px;
+        }
+
+        .sale-entry:last-child {
+            border-bottom: none;
+        }
+
+        .sale-time {
+            color: #666;
+            font-size: 11px;
+        }
+
+        .sales-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .summary-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid #ddd;
+        }
+
+        .summary-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #28a745;
+        }
+
+        .summary-label {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
     </style>
 </head>
+
 <body>
     <div class="debug-container">
         <h1>🔧 Admin Dashboard Debug</h1>
         <p>This is a simplified version to test the login functionality.</p>
-        
+
         <div class="login-form">
             <h3>Login Test</h3>
             <form id="debug-login-form">
@@ -107,28 +254,30 @@
                     <label for="username">Username:</label>
                     <input type="text" id="username" value="admin" required>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="password">Password:</label>
                     <input type="password" id="password" value="shoepoint123" required>
                 </div>
-                
+
                 <button type="submit">Login</button>
                 <button type="button" onclick="testDirectLogin()">Direct Login Test</button>
                 <button type="button" onclick="clearStorage()">Clear Storage</button>
             </form>
         </div>
-        
+
         <div id="debug-output" class="debug-info">
             Ready to test login...
         </div>
-        
+
         <div id="dashboard-preview" class="dashboard-preview">
             <h3>✅ Dashboard Preview</h3>
             <p><strong>Login Successful!</strong></p>
             <p>You would now see the full admin dashboard.</p>
             <button onclick="window.open('admin.html', '_blank')">Open Full Admin Dashboard</button>
             <button onclick="logout()">Logout</button>
+
+
         </div>
     </div>
 
@@ -141,31 +290,31 @@
             },
             STORAGE_KEY: 'shoepoint_admin_auth'
         };
-        
+
         // Debug output function
         function debugLog(message, type = 'info') {
             const output = document.getElementById('debug-output');
             const timestamp = new Date().toLocaleTimeString();
             const className = type === 'error' ? 'error' : type === 'success' ? 'success' : '';
-            
+
             output.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
             output.scrollTop = output.scrollHeight;
             console.log(`[DEBUG] ${message}`);
         }
-        
+
         // Simple auth functions
         function login(username, password) {
             debugLog(`Attempting login with username: ${username}`);
-            
-            if (username === DEBUG_CONFIG.CREDENTIALS.username && 
+
+            if (username === DEBUG_CONFIG.CREDENTIALS.username &&
                 password === DEBUG_CONFIG.CREDENTIALS.password) {
-                
+
                 const authData = {
                     username: username,
                     timestamp: Date.now(),
                     sessionId: 'debug_' + Date.now()
                 };
-                
+
                 localStorage.setItem(DEBUG_CONFIG.STORAGE_KEY, JSON.stringify(authData));
                 debugLog('Login successful! Auth data saved to localStorage.', 'success');
                 return true;
@@ -174,19 +323,19 @@
                 return false;
             }
         }
-        
+
         function isLoggedIn() {
             const auth = localStorage.getItem(DEBUG_CONFIG.STORAGE_KEY);
             if (!auth) {
                 debugLog('No auth data found in localStorage.');
                 return false;
             }
-            
+
             try {
                 const authData = JSON.parse(auth);
                 const now = Date.now();
                 const isValid = authData.timestamp && (now - authData.timestamp) < 24 * 60 * 60 * 1000;
-                
+
                 debugLog(`Auth data found. Valid: ${isValid}`);
                 return isValid;
             } catch (error) {
@@ -194,49 +343,303 @@
                 return false;
             }
         }
-        
+
         function logout() {
             localStorage.removeItem(DEBUG_CONFIG.STORAGE_KEY);
             debugLog('Logged out successfully.');
             document.getElementById('dashboard-preview').classList.remove('show');
         }
-        
+
         function clearStorage() {
             localStorage.clear();
             debugLog('All localStorage cleared.');
             document.getElementById('dashboard-preview').classList.remove('show');
         }
-        
+
         function testDirectLogin() {
             debugLog('Testing direct login...');
             if (login('admin', 'shoepoint123')) {
                 showDashboard();
             }
         }
-        
+
         function showDashboard() {
             document.getElementById('dashboard-preview').classList.add('show');
             debugLog('Dashboard would be shown now.', 'success');
         }
-        
+
         // Form submission handler
-        document.getElementById('debug-login-form').addEventListener('submit', function(e) {
+        document.getElementById('debug-login-form').addEventListener('submit', function (e) {
             e.preventDefault();
-            
+
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
-            
+
             debugLog('Form submitted');
-            
+
             if (login(username, password)) {
                 showDashboard();
             }
         });
-        
+
+        // Physical Sales System
+        const INVENTORY_KEY = 'shoepoint_inventory';
+        const SALES_LOG_KEY = 'shoepoint_sales_log';
+
+        // Default inventory data
+        const DEFAULT_INVENTORY = [
+            { id: 1, name: 'Air Jordan 5 Retro', price: 12500, stock: 15, image: 'sl1.webp' },
+            { id: 2, name: 'Hiking Shoes for Adventurers', price: 8500, stock: 20, image: 'card 1.webp' },
+            { id: 3, name: 'High-Top Basketball Shoes', price: 9500, stock: 12, image: 'card 2.webp' },
+            { id: 4, name: 'Soccer Cleats for Speed', price: 7500, stock: 18, image: 'card 4.webp' },
+            { id: 5, name: 'Lightweight Running Shoes', price: 6500, stock: 25, image: 'card 6.webp' },
+            { id: 6, name: 'Tennis Court Shoes', price: 8000, stock: 10, image: 'sc4.webp' }
+        ];
+
+        function initializeInventory() {
+            let inventory = localStorage.getItem(INVENTORY_KEY);
+            if (!inventory) {
+                localStorage.setItem(INVENTORY_KEY, JSON.stringify(DEFAULT_INVENTORY));
+                inventory = DEFAULT_INVENTORY;
+            } else {
+                inventory = JSON.parse(inventory);
+            }
+            return inventory;
+        }
+
+        function getInventory() {
+            return JSON.parse(localStorage.getItem(INVENTORY_KEY) || '[]');
+        }
+
+        function updateInventory(inventory) {
+            localStorage.setItem(INVENTORY_KEY, JSON.stringify(inventory));
+        }
+
+        function getSalesLog() {
+            return JSON.parse(localStorage.getItem(SALES_LOG_KEY) || '[]');
+        }
+
+        function addSaleToLog(sale) {
+            const salesLog = getSalesLog();
+            salesLog.unshift(sale); // Add to beginning
+            if (salesLog.length > 50) salesLog.pop(); // Keep only last 50 sales
+            localStorage.setItem(SALES_LOG_KEY, JSON.stringify(salesLog));
+        }
+
+        function renderInventory() {
+            const inventory = getInventory();
+            const grid = document.getElementById('inventory-grid');
+            const select = document.getElementById('product-select');
+
+            if (!grid || !select) return;
+
+            // Clear existing content
+            grid.innerHTML = '';
+            select.innerHTML = '<option value="">Select Product...</option>';
+
+            inventory.forEach(item => {
+                // Create inventory card
+                const card = document.createElement('div');
+                card.className = 'inventory-item';
+
+                const stockClass = item.stock === 0 ? 'out' : item.stock < 5 ? 'low' : '';
+                const stockText = item.stock === 0 ? 'Out of Stock' : `${item.stock} in stock`;
+
+                card.innerHTML = `
+                    <h5>${item.name}</h5>
+                    <div class="inventory-details">
+                        <span class="stock-info">Rs ${item.price.toLocaleString()}</span>
+                        <span class="stock-count ${stockClass}">${stockText}</span>
+                    </div>
+                    <button onclick="sellItem(${item.id})" class="sell-btn" ${item.stock === 0 ? 'disabled' : ''}>
+                        💰 Sell 1
+                    </button>
+                `;
+
+                grid.appendChild(card);
+
+                // Add to select dropdown
+                if (item.stock > 0) {
+                    const option = document.createElement('option');
+                    option.value = item.id;
+                    option.textContent = `${item.name} (${item.stock} available)`;
+                    select.appendChild(option);
+                }
+            });
+        }
+
+        function sellItem(productId, quantity = 1) {
+            const inventory = getInventory();
+            const item = inventory.find(p => p.id === productId);
+
+            if (!item) {
+                debugLog('Product not found!', 'error');
+                return false;
+            }
+
+            if (item.stock < quantity) {
+                debugLog(`Not enough stock! Only ${item.stock} available.`, 'error');
+                return false;
+            }
+
+            // Update stock
+            item.stock -= quantity;
+            updateInventory(inventory);
+
+            // Log the sale
+            const sale = {
+                id: Date.now(),
+                productId: productId,
+                productName: item.name,
+                quantity: quantity,
+                price: item.price,
+                total: item.price * quantity,
+                timestamp: new Date().toISOString(),
+                type: 'physical'
+            };
+
+            addSaleToLog(sale);
+
+            // Update displays
+            renderInventory();
+            renderSalesLog();
+            renderSalesSummary();
+
+            debugLog(`Sold ${quantity}x ${item.name} for Rs ${(item.price * quantity).toLocaleString()}`, 'success');
+            return true;
+        }
+
+        function processSale() {
+            const productSelect = document.getElementById('product-select');
+            const quantityInput = document.getElementById('quantity-input');
+
+            const productId = parseInt(productSelect.value);
+            const quantity = parseInt(quantityInput.value) || 1;
+
+            if (!productId) {
+                debugLog('Please select a product!', 'error');
+                return;
+            }
+
+            if (sellItem(productId, quantity)) {
+                // Reset form
+                productSelect.value = '';
+                quantityInput.value = '1';
+            }
+        }
+
+        function renderSalesLog() {
+            const salesLog = getSalesLog();
+            const logContainer = document.getElementById('sales-log');
+
+            if (!logContainer) return;
+
+            if (salesLog.length === 0) {
+                logContainer.innerHTML = '<p style="color: #666; font-style: italic;">No sales recorded yet.</p>';
+                return;
+            }
+
+            logContainer.innerHTML = salesLog.slice(0, 10).map(sale => {
+                const date = new Date(sale.timestamp);
+                return `
+                    <div class="sale-entry">
+                        <strong>${sale.productName}</strong> x${sale.quantity} - Rs ${sale.total.toLocaleString()}
+                        <div class="sale-time">${date.toLocaleString()}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderSalesSummary() {
+            const salesLog = getSalesLog();
+            const inventory = getInventory();
+            const summaryContainer = document.getElementById('sales-summary');
+
+            if (!summaryContainer) return;
+
+            const totalRevenue = salesLog.reduce((sum, sale) => sum + sale.total, 0);
+            const totalTransactions = salesLog.length;
+            const totalStock = inventory.reduce((sum, item) => sum + item.stock, 0);
+            const lowStockItems = inventory.filter(item => item.stock < 5 && item.stock > 0).length;
+            const outOfStockItems = inventory.filter(item => item.stock === 0).length;
+
+            summaryContainer.innerHTML = `
+                <div class="summary-card">
+                    <div class="summary-value">Rs ${totalRevenue.toLocaleString()}</div>
+                    <div class="summary-label">Total Revenue</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-value">${totalTransactions}</div>
+                    <div class="summary-label">Transactions</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-value">${totalStock}</div>
+                    <div class="summary-label">Total Stock</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-value" style="color: ${lowStockItems > 0 ? '#ffc107' : '#28a745'}">${lowStockItems}</div>
+                    <div class="summary-label">Low Stock</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-value" style="color: ${outOfStockItems > 0 ? '#dc3545' : '#28a745'}">${outOfStockItems}</div>
+                    <div class="summary-label">Out of Stock</div>
+                </div>
+            `;
+        }
+
+        function resetInventory() {
+            localStorage.setItem(INVENTORY_KEY, JSON.stringify(DEFAULT_INVENTORY));
+            renderInventory();
+            renderSalesSummary();
+            debugLog('Inventory reset to default values.', 'success');
+        }
+
+        function clearSalesLog() {
+            localStorage.removeItem(SALES_LOG_KEY);
+            renderSalesLog();
+            renderSalesSummary();
+            debugLog('Sales log cleared.', 'success');
+        }
+
+        function exportSalesData() {
+            const salesLog = getSalesLog();
+            const inventory = getInventory();
+
+            const exportData = {
+                sales: salesLog,
+                inventory: inventory,
+                exportDate: new Date().toISOString(),
+                totalSales: salesLog.reduce((sum, sale) => sum + sale.total, 0),
+                totalTransactions: salesLog.length
+            };
+
+            const dataStr = JSON.stringify(exportData, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(dataBlob);
+            link.download = `shoepoint-sales-${new Date().toISOString().split('T')[0]}.json`;
+            link.click();
+
+            debugLog('Sales data exported successfully.', 'success');
+        }
+
+        // Enhanced showDashboard function
+        function showDashboard() {
+            document.getElementById('dashboard-preview').classList.add('show');
+            debugLog('Dashboard would be shown now.', 'success');
+
+            // Initialize physical sales system
+            initializeInventory();
+            renderInventory();
+            renderSalesLog();
+            renderSalesSummary();
+        }
+
         // Check login status on load
-        window.addEventListener('load', function() {
+        window.addEventListener('load', function () {
             debugLog('Page loaded. Checking login status...');
-            
+
             if (isLoggedIn()) {
                 debugLog('User is already logged in.', 'success');
                 showDashboard();
@@ -246,4 +649,5 @@
         });
     </script>
 </body>
+
 </html>

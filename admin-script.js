@@ -629,6 +629,7 @@ const AdminDashboard = {
      */
     handleLogin(e) {
         e.preventDefault();
+        console.log('Login form submitted');
 
         const username = document.getElementById('admin-username').value;
         const password = document.getElementById('admin-password').value;
@@ -636,29 +637,70 @@ const AdminDashboard = {
         const loginText = document.querySelector('.login-text');
         const loginSpinner = document.querySelector('.login-spinner');
 
+        console.log('Login attempt:', { username, password: '***' });
+        console.log('Button elements:', { loginBtn, loginText, loginSpinner });
+
+        if (!loginBtn || !loginText || !loginSpinner) {
+            console.error('Login button elements not found!');
+            return;
+        }
+
         // Show loading state
         loginBtn.disabled = true;
         loginText.style.display = 'none';
         loginSpinner.style.display = 'inline';
 
+        // Validate credentials immediately
+        console.log('Checking credentials...');
+        const isValidLogin = (username === 'admin' && password === 'shoepoint123');
+        console.log('Credentials valid:', isValidLogin);
+
         // Simulate login delay
         setTimeout(() => {
-            if (AuthManager.login(username, password)) {
+            if (isValidLogin && AuthManager.login(username, password)) {
                 console.log('Login successful, showing dashboard');
-                AdminUtils.showNotification('Login successful! Welcome to Admin Dashboard.');
 
-                // Hide login screen and show dashboard
-                document.getElementById('login-screen').style.display = 'none';
-                document.getElementById('admin-dashboard').style.display = 'flex';
+                try {
+                    // Reset button state first
+                    loginBtn.disabled = false;
+                    loginText.style.display = 'inline';
+                    loginSpinner.style.display = 'none';
 
-                // Initialize dashboard components
-                DataManager.initializeProducts();
-                this.loadDashboardData();
-                this.setupRealTimeNotifications();
-                WebsiteIntegration.listenForOrders();
+                    // Hide login screen and show dashboard
+                    console.log('Calling showDashboard...');
+                    this.showDashboard();
+
+                    // Initialize dashboard components
+                    console.log('Initializing dashboard components...');
+                    DataManager.initializeProducts();
+
+                    // Initialize physical sales system
+                    if (typeof PhysicalSalesManager !== 'undefined') {
+                        console.log('Initializing Physical Sales Manager...');
+                        PhysicalSalesManager.initializeInventory();
+                    } else {
+                        console.warn('PhysicalSalesManager not found');
+                    }
+
+                    this.loadDashboardData();
+                    this.setupRealTimeNotifications();
+                    WebsiteIntegration.listenForOrders();
+
+                    AdminUtils.showNotification('Login successful! Welcome to Admin Dashboard.');
+                    console.log('Login process completed successfully');
+
+                } catch (error) {
+                    console.error('Error during login process:', error);
+                    AdminUtils.showNotification('Error loading dashboard: ' + error.message, 'error');
+
+                    // Reset button state on error
+                    loginBtn.disabled = false;
+                    loginText.style.display = 'inline';
+                    loginSpinner.style.display = 'none';
+                }
 
             } else {
-                console.log('Login failed');
+                console.log('Login failed - invalid credentials');
                 AdminUtils.showNotification('Invalid credentials. Please try again.', 'error');
 
                 // Reset button state
@@ -694,6 +736,7 @@ const AdminDashboard = {
             products: 'Product Management',
             orders: 'Order Management',
             customers: 'Customer Management',
+
             analytics: 'Analytics & Reports',
             settings: 'Store Settings'
         };
@@ -703,6 +746,7 @@ const AdminDashboard = {
             products: 'Manage your shoe inventory, prices, and details',
             orders: 'Track and manage customer orders',
             customers: 'View and manage your customers',
+
             analytics: 'Track your store performance and insights',
             settings: 'Configure your store preferences and payment settings'
         };
@@ -720,6 +764,8 @@ const AdminDashboard = {
     loadDashboardData() {
         this.loadStats();
         this.loadRecentOrders();
+        this.loadPhysicalSalesData();
+        this.loadReturnData();
     },
 
     /**
@@ -727,11 +773,84 @@ const AdminDashboard = {
      */
     loadStats() {
         const stats = DataManager.getStats();
+        const physicalStats = this.getPhysicalSalesStats();
 
-        document.getElementById('total-revenue').textContent = AdminUtils.formatCurrency(stats.totalRevenue);
-        document.getElementById('total-orders').textContent = stats.totalOrders;
-        document.getElementById('total-products').textContent = stats.totalProducts;
-        document.getElementById('total-customers').textContent = stats.totalCustomers;
+        // Update existing elements with null checks
+        const totalRevenueEl = document.getElementById('total-revenue');
+        if (totalRevenueEl) totalRevenueEl.textContent = AdminUtils.formatCurrency(stats.totalRevenue);
+
+        const physicalRevenueEl = document.getElementById('physical-revenue');
+        if (physicalRevenueEl) physicalRevenueEl.textContent = AdminUtils.formatCurrency(physicalStats.totalRevenue);
+
+        const physicalTransactionsEl = document.getElementById('physical-transactions');
+        if (physicalTransactionsEl) physicalTransactionsEl.textContent = `${physicalStats.totalTransactions} transactions`;
+
+        const totalOrdersEl = document.getElementById('total-orders');
+        if (totalOrdersEl) totalOrdersEl.textContent = stats.totalOrders;
+
+        const totalStockEl = document.getElementById('total-stock');
+        if (totalStockEl) totalStockEl.textContent = physicalStats.totalStock;
+
+        const stockAlertsEl = document.getElementById('stock-alerts');
+        if (stockAlertsEl) stockAlertsEl.textContent = physicalStats.stockAlert;
+
+        // Update legacy elements if they exist (for backward compatibility)
+        const totalProductsEl = document.getElementById('total-products');
+        if (totalProductsEl) totalProductsEl.textContent = stats.totalProducts;
+
+        const totalCustomersEl = document.getElementById('total-customers');
+        if (totalCustomersEl) totalCustomersEl.textContent = stats.totalCustomers;
+    },
+
+    /**
+     * Get physical sales statistics
+     */
+    getPhysicalSalesStats() {
+        try {
+            const salesLog = JSON.parse(localStorage.getItem('shoepoint_sales_log') || '[]');
+            const inventory = JSON.parse(localStorage.getItem('shoepoint_inventory') || '[]');
+            const returns = typeof ReturnManager !== 'undefined' ? ReturnManager.getReturns() : [];
+
+            // Calculate revenue including returns
+            const grossRevenue = salesLog.reduce((sum, sale) => sum + (sale.total || 0), 0);
+            const totalRefunds = returns.reduce((sum, returnRecord) => sum + (returnRecord.refundAmount || 0), 0);
+            const netRevenue = grossRevenue - totalRefunds;
+
+            const totalTransactions = salesLog.length;
+            const totalReturns = returns.length;
+            const totalStock = inventory.reduce((sum, item) => sum + (item.stock || 0), 0);
+            const lowStockItems = inventory.filter(item => item.stock < 2 && item.stock > 0).length;
+            const outOfStockItems = inventory.filter(item => item.stock === 0).length;
+
+            let stockAlert = 'All in stock';
+            if (outOfStockItems > 0) {
+                stockAlert = `${outOfStockItems} out of stock`;
+            } else if (lowStockItems > 0) {
+                stockAlert = `${lowStockItems} low stock`;
+            }
+
+            return {
+                totalRevenue: netRevenue, // Net revenue after returns
+                grossRevenue: grossRevenue,
+                totalRefunds: totalRefunds,
+                totalTransactions,
+                totalReturns,
+                totalStock,
+                stockAlert,
+                lowStockItems,
+                outOfStockItems
+            };
+        } catch (error) {
+            console.warn('Error getting physical sales stats:', error);
+            return {
+                totalRevenue: 0,
+                totalTransactions: 0,
+                totalStock: 0,
+                stockAlert: 'Error loading',
+                lowStockItems: 0,
+                outOfStockItems: 0
+            };
+        }
     },
 
     /**
@@ -769,12 +888,246 @@ const AdminDashboard = {
     },
 
     /**
+     * Load physical sales data for dashboard widgets
+     */
+    loadPhysicalSalesData() {
+        try {
+            console.log('Loading physical sales data...');
+
+            // Initialize physical sales if not already done (only once)
+            if (typeof PhysicalSalesManager !== 'undefined') {
+                const inventory = JSON.parse(localStorage.getItem('shoepoint_inventory') || '[]');
+                if (inventory.length === 0) {
+                    PhysicalSalesManager.initializeInventory();
+                }
+            }
+
+            this.loadQuickSellWidget();
+            this.loadRecentPhysicalSales();
+            this.loadStockAlerts();
+
+            console.log('Physical sales data loaded successfully');
+        } catch (error) {
+            console.error('Error loading physical sales data:', error);
+        }
+    },
+
+    /**
+     * Load return data and initialize return functionality
+     */
+    loadReturnData() {
+        try {
+            // Load returnable sales into dropdown
+            if (typeof loadReturnSaleOptions === 'function') {
+                loadReturnSaleOptions();
+            }
+            
+            // Load recent returns for display
+            this.loadRecentReturns();
+            
+            console.log('Return data loaded successfully');
+        } catch (error) {
+            console.error('Error loading return data:', error);
+        }
+    },
+
+    /**
+     * Load recent returns for dashboard display
+     */
+    loadRecentReturns() {
+        if (typeof ReturnManager === 'undefined') return;
+        
+        const recentReturns = ReturnManager.getReturnHistory().slice(0, 5);
+        const container = document.getElementById('recent-returns');
+        
+        if (!container) return;
+        
+        if (recentReturns.length === 0) {
+            container.innerHTML = '<p class="no-data">No returns processed yet.</p>';
+            return;
+        }
+        
+        container.innerHTML = recentReturns.map(returnRecord => `
+            <div class="recent-return-item">
+                <div>
+                    <strong>Return #${returnRecord.returnId.substr(-8)}</strong><br>
+                    <small>${returnRecord.productName} (${returnRecord.size}/${returnRecord.color})</small><br>
+                    <small>Qty: ${returnRecord.returnQuantity} | Refund: Rs.${returnRecord.refundAmount}</small>
+                </div>
+                <div style="text-align: right;">
+                    <small style="color: #7f8c8d;">${AdminUtils.formatDate(returnRecord.processedAt)}</small>
+                </div>
+            </div>
+        `).join('');
+    },
+
+    /**
+     * Load quick sell widget
+     */
+    loadQuickSellWidget() {
+        // Initialize inventory if empty
+        let inventory = JSON.parse(localStorage.getItem('shoepoint_inventory') || '[]');
+        if (inventory.length === 0 && typeof PhysicalSalesManager !== 'undefined') {
+            PhysicalSalesManager.initializeInventory();
+            inventory = JSON.parse(localStorage.getItem('shoepoint_inventory') || '[]');
+        }
+
+        const select = document.getElementById('dashboard-product-select');
+        console.log('Loading quick sell widget, select element:', select);
+        console.log('Inventory items:', inventory.length);
+
+        if (!select) {
+            console.warn('Dashboard product select not found');
+            return;
+        }
+
+        select.innerHTML = '<option value="">Select product to sell...</option>';
+
+        inventory.forEach(item => {
+            if (item.stock > 0) {
+                const option = document.createElement('option');
+                option.value = item.id;
+                option.textContent = `${item.name} (${item.stock} available)`;
+                select.appendChild(option);
+            }
+        });
+
+        console.log('Quick sell widget loaded with', select.options.length - 1, 'products');
+
+        // Load dashboard inventory only once
+        if (!this._dashboardInventoryLoaded) {
+            this.loadDashboardInventory();
+            this._dashboardInventoryLoaded = true;
+        }
+    },
+
+    /**
+     * Load dashboard inventory list
+     */
+    loadDashboardInventory() {
+        const inventory = JSON.parse(localStorage.getItem('shoepoint_inventory') || '[]');
+        const container = document.getElementById('dashboard-inventory-list');
+
+        if (!container) return;
+
+        if (inventory.length === 0) {
+            container.innerHTML = '<p class="no-data">No products found. Click "Add Product" to get started!</p>';
+            return;
+        }
+
+        container.innerHTML = inventory.map(item => {
+            const stockClass = item.stock === 0 ? 'out' : item.stock < 2 ? 'low' : 'good';
+            const stockText = item.stock === 0 ? 'Out of Stock' : `${item.stock} in stock`;
+
+            return `
+                <div class="inventory-item-mini">
+                    <div class="inventory-item-info">
+                        <div class="inventory-item-name">${item.name}</div>
+                        <div class="inventory-item-details">
+                            Rs ${item.price.toLocaleString()} • ${item.category}
+                            ${item.sizes ? ` • Sizes: ${item.sizes.join(', ')}` : ''}
+                            ${item.colors ? ` • Colors: ${item.colors.join(', ')}` : ''}
+                        </div>
+                    </div>
+                    <div class="inventory-item-stock ${stockClass}">${stockText}</div>
+                    <div class="inventory-item-actions">
+                        <button onclick="editDashboardProduct(${item.id})" class="action-btn-mini edit-btn-mini" title="Edit">✏️</button>
+                        <button onclick="deleteDashboardProduct(${item.id})" class="action-btn-mini delete-btn-mini" title="Delete">🗑️</button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    },
+
+    /**
+     * Load recent physical sales
+     */
+    loadRecentPhysicalSales() {
+        const salesLog = JSON.parse(localStorage.getItem('shoepoint_sales_log') || '[]');
+        const container = document.getElementById('recent-physical-sales');
+
+        if (!container) return;
+
+        if (salesLog.length === 0) {
+            container.innerHTML = '<p class="no-data">No sales yet.</p>';
+            return;
+        }
+
+        const recentSales = salesLog.slice(0, 4); // Show 4 recent sales
+        container.innerHTML = recentSales.map(sale => {
+            const date = new Date(sale.timestamp);
+            let optionsText = '';
+            if (sale.size || sale.color) {
+                const parts = [];
+                if (sale.size) parts.push(`Size ${sale.size}`);
+                if (sale.color) parts.push(sale.color);
+                optionsText = ` • ${parts.join(', ')}`;
+            }
+
+            return `
+                <div class="sale-item-mini">
+                    <div class="sale-product-mini">${sale.productName}${optionsText}</div>
+                    <div class="sale-details-mini">Quantity: ${sale.quantity}</div>
+                    <div class="sale-price-breakdown">Rs ${sale.price.toLocaleString()} × ${sale.quantity} = Rs ${sale.total.toLocaleString()}</div>
+                    <div class="sale-date">${date.toLocaleDateString()} at ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                </div>
+            `;
+        }).join('');
+    },
+
+    /**
+     * Load stock alerts
+     */
+    loadStockAlerts() {
+        const inventory = JSON.parse(localStorage.getItem('shoepoint_inventory') || '[]');
+        const container = document.getElementById('stock-alerts-widget');
+
+        if (!container) return;
+
+        const lowStockItems = inventory.filter(item => item.stock < 2 && item.stock > 0);
+        const outOfStockItems = inventory.filter(item => item.stock === 0);
+
+        if (lowStockItems.length === 0 && outOfStockItems.length === 0) {
+            container.innerHTML = '<p class="no-data">All in stock.</p>';
+            return;
+        }
+
+        let alertsHtml = '';
+
+        // Show only first 2 out of stock items
+        outOfStockItems.slice(0, 2).forEach(item => {
+            alertsHtml += `
+                <div class="stock-alert-mini out">
+                    <div class="alert-product-mini">${item.name}</div>
+                    <div class="alert-stock-mini">Out of stock</div>
+                </div>
+            `;
+        });
+
+        // Show only first 2 low stock items
+        lowStockItems.slice(0, 2).forEach(item => {
+            alertsHtml += `
+                <div class="stock-alert-mini low">
+                    <div class="alert-product-mini">${item.name}</div>
+                    <div class="alert-stock-mini">${item.stock} left</div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = alertsHtml;
+    },
+
+    /**
      * Load section-specific data
      */
     loadSectionData(sectionName) {
         switch (sectionName) {
             case 'overview':
                 this.loadDashboardData();
+                // Ensure physical sales system is initialized
+                if (typeof PhysicalSalesManager !== 'undefined') {
+                    PhysicalSalesManager.initializeInventory();
+                }
                 break;
             case 'products':
                 this.loadProducts();
@@ -784,6 +1137,20 @@ const AdminDashboard = {
                 break;
             case 'customers':
                 this.loadCustomers();
+                break;
+            case 'physical-sales':
+                console.log('Loading physical sales section...');
+                if (typeof PhysicalSalesManager !== 'undefined') {
+                    PhysicalSalesManager.init();
+                    // Load default tab (inventory)
+                    setTimeout(() => {
+                        if (typeof switchPhysicalTab !== 'undefined') {
+                            switchPhysicalTab('inventory');
+                        }
+                    }, 100);
+                } else {
+                    console.error('PhysicalSalesManager not found');
+                }
                 break;
             case 'analytics':
                 this.loadAnalytics();
@@ -1036,3 +1403,1752 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ===== GLOBAL FUNCTIONS =====
 window.AdminDashboard = AdminDashboard;
+// ===== PHYSICAL SALES MANAGER =====
+const PhysicalSalesManager = {
+    INVENTORY_KEY: 'shoepoint_inventory',
+    SALES_LOG_KEY: 'shoepoint_sales_log',
+
+    // Default inventory data with sizes and colors
+    DEFAULT_INVENTORY: [
+        {
+            id: 1,
+            name: 'Air Jordan 5 Retro',
+            price: 12500,
+            stock: 15,
+            image: 'sl1.webp',
+            category: 'Basketball',
+            description: 'Premium basketball shoes with excellent grip and comfort',
+            sizes: ['8', '9', '10', '11', '12'],
+            colors: ['Black', 'White', 'Red']
+        },
+        {
+            id: 2,
+            name: 'Hiking Shoes for Adventurers',
+            price: 8500,
+            stock: 20,
+            image: 'card 1.webp',
+            category: 'Hiking',
+            description: 'Durable hiking shoes for outdoor adventures',
+            sizes: ['7', '8', '9', '10', '11'],
+            colors: ['Brown', 'Black', 'Gray']
+        },
+        {
+            id: 3,
+            name: 'High-Top Basketball Shoes',
+            price: 9500,
+            stock: 12,
+            image: 'card 2.webp',
+            category: 'Basketball',
+            description: 'High-top design for ankle support during intense games',
+            sizes: ['8', '9', '10', '11', '12'],
+            colors: ['Black', 'White', 'Blue']
+        },
+        {
+            id: 4,
+            name: 'Soccer Cleats for Speed',
+            price: 7500,
+            stock: 18,
+            image: 'card 4.webp',
+            category: 'Soccer',
+            description: 'Lightweight cleats designed for speed and agility',
+            sizes: ['7', '8', '9', '10', '11'],
+            colors: ['Black', 'White', 'Blue']
+        },
+        {
+            id: 5,
+            name: 'Lightweight Running Shoes',
+            price: 6500,
+            stock: 25,
+            image: 'card 6.webp',
+            category: 'Running',
+            description: 'Ultra-lightweight shoes for long-distance running',
+            sizes: ['7', '8', '9', '10', '11', '12'],
+            colors: ['Black', 'White', 'Gray', 'Blue']
+        },
+        {
+            id: 6,
+            name: 'Tennis Court Shoes',
+            price: 8000,
+            stock: 10,
+            image: 'sc4.webp',
+            category: 'Tennis',
+            description: 'Professional tennis shoes with superior court grip',
+            sizes: ['8', '9', '10', '11'],
+            colors: ['White', 'Black']
+        }
+    ],
+
+    /**
+     * Initialize physical sales system
+     */
+    init() {
+        console.log('Initializing PhysicalSalesManager...');
+        this.initializeInventory();
+        this.renderAll();
+        console.log('PhysicalSalesManager initialized successfully');
+    },
+
+    /**
+     * Initialize inventory with default data if not exists
+     */
+    initializeInventory() {
+        let inventory = localStorage.getItem(this.INVENTORY_KEY);
+        if (!inventory) {
+            console.log('Initializing default inventory...');
+            localStorage.setItem(this.INVENTORY_KEY, JSON.stringify(this.DEFAULT_INVENTORY));
+        } else {
+            console.log('Inventory already exists, skipping initialization');
+        }
+    },
+
+    /**
+     * Get current inventory
+     */
+    getInventory() {
+        return JSON.parse(localStorage.getItem(this.INVENTORY_KEY) || '[]');
+    },
+
+    /**
+     * Update inventory in storage
+     */
+    updateInventory(inventory) {
+        localStorage.setItem(this.INVENTORY_KEY, JSON.stringify(inventory));
+    },
+
+    /**
+     * Get sales log
+     */
+    getSalesLog() {
+        return JSON.parse(localStorage.getItem(this.SALES_LOG_KEY) || '[]');
+    },
+
+    /**
+     * Add sale to log
+     */
+    addSaleToLog(sale) {
+        const salesLog = this.getSalesLog();
+        salesLog.unshift(sale); // Add to beginning
+        if (salesLog.length > 100) salesLog.pop(); // Keep only last 100 sales
+        localStorage.setItem(this.SALES_LOG_KEY, JSON.stringify(salesLog));
+    },
+
+    /**
+     * Save sales log to localStorage
+     */
+    saveSalesLog(salesLog) {
+        try {
+            localStorage.setItem(this.SALES_LOG_KEY, JSON.stringify(salesLog));
+        } catch (error) {
+            console.error('Error saving sales log:', error);
+        }
+    },
+
+    /**
+     * Update product stock (for returns)
+     */
+    updateProductStock(productId, quantityToAdd) {
+        const inventory = this.getInventory();
+        const productIndex = inventory.findIndex(p => p.id === productId);
+        
+        if (productIndex !== -1) {
+            inventory[productIndex].stock += quantityToAdd;
+            this.saveInventory(inventory);
+            return true;
+        }
+        return false;
+    },
+
+    /**
+     * Render all components
+     */
+    renderAll() {
+        console.log('Rendering all physical sales components...');
+        try {
+            this.renderSalesSummary();
+            // Only render inventory if we're on the physical sales section
+            const physicalSalesSection = document.getElementById('physical-sales-section');
+            if (physicalSalesSection && physicalSalesSection.classList.contains('active')) {
+                this.renderInventory();
+            }
+            this.renderSalesLog();
+            console.log('All components rendered successfully');
+        } catch (error) {
+            console.error('Error rendering components:', error);
+        }
+    },
+
+    /**
+     * Render sales summary cards
+     */
+    renderSalesSummary() {
+        const salesLog = this.getSalesLog();
+        const inventory = this.getInventory();
+        const summaryContainer = document.getElementById('sales-summary');
+
+        if (!summaryContainer) return;
+
+        const totalRevenue = salesLog.reduce((sum, sale) => sum + sale.total, 0);
+        const totalTransactions = salesLog.length;
+        const totalStock = inventory.reduce((sum, item) => sum + item.stock, 0);
+        const lowStockItems = inventory.filter(item => item.stock < 2 && item.stock > 0).length;
+        const outOfStockItems = inventory.filter(item => item.stock === 0).length;
+
+        summaryContainer.innerHTML = `
+            <div class="summary-card">
+                <div class="summary-value">Rs ${totalRevenue.toLocaleString()}</div>
+                <div class="summary-label">Total Revenue</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-value">${totalTransactions}</div>
+                <div class="summary-label">Transactions</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-value">${totalStock}</div>
+                <div class="summary-label">Total Stock</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-value" style="color: ${lowStockItems > 0 ? '#856404' : '#28a745'}">${lowStockItems}</div>
+                <div class="summary-label">Low Stock</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-value" style="color: ${outOfStockItems > 0 ? '#721c24' : '#28a745'}">${outOfStockItems}</div>
+                <div class="summary-label">Out of Stock</div>
+            </div>
+        `;
+    },
+
+    /**
+     * Render inventory grid
+     */
+    renderInventory() {
+        const inventory = this.getInventory();
+        const grid = document.getElementById('inventory-grid');
+        const select = document.getElementById('product-select');
+
+        if (!grid || !select) return;
+
+        // Clear existing content
+        grid.innerHTML = '';
+        select.innerHTML = '<option value="">Choose a product...</option>';
+
+        inventory.forEach(item => {
+            // Create inventory card
+            const card = document.createElement('div');
+            card.className = 'inventory-item';
+
+            const stockClass = item.stock === 0 ? 'out' : item.stock < 2 ? 'low' : '';
+            const stockText = item.stock === 0 ? 'Out of Stock' : `${item.stock} in stock`;
+
+            card.innerHTML = `
+                <h5>${item.name}</h5>
+                <div class="inventory-details">
+                    <span class="stock-info">Rs ${item.price.toLocaleString()}</span>
+                    <span class="stock-count ${stockClass}">${stockText}</span>
+                </div>
+                <button onclick="PhysicalSalesManager.sellItem(${item.id})" class="sell-btn" ${item.stock === 0 ? 'disabled' : ''}>
+                    💰 Sell 1 Unit
+                </button>
+            `;
+
+            grid.appendChild(card);
+
+            // Add to select dropdown
+            if (item.stock > 0) {
+                const option = document.createElement('option');
+                option.value = item.id;
+                option.textContent = `${item.name} (${item.stock} available)`;
+                select.appendChild(option);
+            }
+        });
+    },
+
+    /**
+     * Render sales log
+     */
+    renderSalesLog() {
+        const salesLog = this.getSalesLog();
+        const logContainer = document.getElementById('sales-log');
+
+        if (!logContainer) return;
+
+        if (salesLog.length === 0) {
+            logContainer.innerHTML = '<p style="color: #666; font-style: italic; text-align: center; padding: 20px;">No sales recorded yet. Start selling to see transaction history here.</p>';
+            return;
+        }
+
+        logContainer.innerHTML = salesLog.slice(0, 20).map(sale => {
+            const date = new Date(sale.timestamp);
+            return `
+                <div class="sale-entry">
+                    <div><strong>${sale.productName}</strong> x${sale.quantity}</div>
+                    <div>Rs ${sale.total.toLocaleString()} <span class="sale-time">${date.toLocaleString()}</span></div>
+                </div>
+            `;
+        }).join('');
+    },
+
+    /**
+     * Sell an item
+     */
+    sellItem(productId, quantity = 1) {
+        return this.sellItemWithOptions(productId, quantity, {});
+    },
+
+    /**
+     * Sell an item with options (size, color)
+     */
+    sellItemWithOptions(productId, quantity = 1, options = {}) {
+        const inventory = this.getInventory();
+        const item = inventory.find(p => p.id === productId);
+
+        if (!item) {
+            this.showNotification('Product not found!', 'error');
+            return false;
+        }
+
+        if (item.stock < quantity) {
+            this.showNotification(`Not enough stock! Only ${item.stock} available.`, 'error');
+            return false;
+        }
+
+        // Update stock
+        item.stock -= quantity;
+        this.updateInventory(inventory);
+
+        // Log the sale with options
+        const sale = {
+            id: Date.now(),
+            productId: productId,
+            productName: item.name,
+            quantity: quantity,
+            price: item.price,
+            total: item.price * quantity,
+            size: options.size || null,
+            color: options.color || null,
+            timestamp: new Date().toISOString(),
+            saleDate: new Date().toLocaleDateString(),
+            saleTime: new Date().toLocaleTimeString(),
+            type: 'physical'
+        };
+
+        this.addSaleToLog(sale);
+
+        // Update displays
+        this.renderAll();
+
+        let optionsText = '';
+        if (options.size || options.color) {
+            const parts = [];
+            if (options.size) parts.push(`Size ${options.size}`);
+            if (options.color) parts.push(options.color);
+            optionsText = ` (${parts.join(', ')})`;
+        }
+
+        this.showNotification(`Sold ${quantity}x ${item.name}${optionsText} for Rs ${(item.price * quantity).toLocaleString()}`, 'success');
+        return true;
+    },
+
+    /**
+     * Process sale from quick form
+     */
+    processSale() {
+        const productSelect = document.getElementById('product-select');
+        const quantityInput = document.getElementById('quantity-input');
+
+        const productId = parseInt(productSelect.value);
+        const quantity = parseInt(quantityInput.value) || 1;
+
+        if (!productId) {
+            this.showNotification('Please select a product!', 'error');
+            return;
+        }
+
+        if (this.sellItem(productId, quantity)) {
+            // Reset form
+            productSelect.value = '';
+            quantityInput.value = '1';
+        }
+    },
+
+    /**
+     * Reset inventory to default
+     */
+    resetInventory() {
+        if (confirm('Are you sure you want to reset inventory to default values? This will restore all stock levels.')) {
+            localStorage.setItem(this.INVENTORY_KEY, JSON.stringify(this.DEFAULT_INVENTORY));
+            this.renderAll();
+            this.showNotification('Inventory reset to default values.', 'success');
+        }
+    },
+
+    /**
+     * Clear sales log
+     */
+    clearSalesLog() {
+        if (confirm('Are you sure you want to clear all sales history? This action cannot be undone.')) {
+            localStorage.removeItem(this.SALES_LOG_KEY);
+            this.renderAll();
+            this.showNotification('Sales log cleared.', 'success');
+        }
+    },
+
+    /**
+     * Export sales data
+     */
+    exportSalesData() {
+        const salesLog = this.getSalesLog();
+        const inventory = this.getInventory();
+
+        const exportData = {
+            sales: salesLog,
+            inventory: inventory,
+            exportDate: new Date().toISOString(),
+            summary: {
+                totalSales: salesLog.reduce((sum, sale) => sum + sale.total, 0),
+                totalTransactions: salesLog.length,
+                totalStock: inventory.reduce((sum, item) => sum + item.stock, 0)
+            }
+        };
+
+        const dataStr = JSON.stringify(exportData, null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(dataBlob);
+        link.download = `shoepoint-sales-${new Date().toISOString().split('T')[0]}.json`;
+        link.click();
+
+        this.showNotification('Sales data exported successfully.', 'success');
+    },
+
+    /**
+     * Add new product
+     */
+    addProduct(productData) {
+        console.log('PhysicalSalesManager.addProduct called with:', productData);
+        
+        const inventory = this.getInventory();
+        console.log('Current inventory length:', inventory.length);
+        
+        const newId = inventory.length > 0 ? Math.max(...inventory.map(p => p.id), 0) + 1 : 1;
+        console.log('New product ID will be:', newId);
+
+        const newProduct = {
+            id: newId,
+            name: productData.name,
+            price: parseFloat(productData.price),
+            stock: parseInt(productData.stock),
+            category: productData.category,
+            description: productData.description || '',
+            image: productData.image || 'default.webp',
+            sizes: productData.sizes || [],
+            colors: productData.colors || [],
+            createdAt: new Date().toISOString()
+        };
+
+        console.log('New product object created:', newProduct);
+
+        inventory.push(newProduct);
+        console.log('Product added to inventory, new length:', inventory.length);
+        
+        this.updateInventory(inventory);
+        console.log('Inventory updated in localStorage');
+        
+        // Don't call renderAll here to avoid potential issues
+        console.log('Skipping renderAll() to avoid errors');
+        
+        // Also refresh dashboard inventory if AdminDashboard is available
+        if (typeof AdminDashboard !== 'undefined') {
+            AdminDashboard.loadDashboardInventory();
+            console.log('Dashboard inventory refreshed');
+        }
+
+        this.showNotification(`Product "${newProduct.name}" added successfully!`, 'success');
+        console.log('Success notification shown');
+        
+        return newProduct;
+    },
+
+    /**
+     * Update existing product
+     */
+    updateProduct(productId, productData) {
+        const inventory = this.getInventory();
+        const productIndex = inventory.findIndex(p => p.id === productId);
+
+        if (productIndex === -1) {
+            this.showNotification('Product not found!', 'error');
+            return false;
+        }
+
+        inventory[productIndex] = {
+            ...inventory[productIndex],
+            name: productData.name,
+            price: parseFloat(productData.price),
+            stock: parseInt(productData.stock),
+            category: productData.category,
+            description: productData.description || '',
+            image: productData.image || inventory[productIndex].image,
+            sizes: productData.sizes || [],
+            colors: productData.colors || [],
+            updatedAt: new Date().toISOString()
+        };
+
+        this.updateInventory(inventory);
+        this.renderAll();
+
+        this.showNotification(`Product "${inventory[productIndex].name}" updated successfully!`, 'success');
+        return true;
+    },
+
+    /**
+     * Delete product
+     */
+    deleteProduct(productId) {
+        const inventory = this.getInventory();
+        const productIndex = inventory.findIndex(p => p.id === productId);
+
+        if (productIndex === -1) {
+            this.showNotification('Product not found!', 'error');
+            return false;
+        }
+
+        const productName = inventory[productIndex].name;
+        inventory.splice(productIndex, 1);
+        this.updateInventory(inventory);
+        this.renderAll();
+
+        this.showNotification(`Product "${productName}" deleted successfully!`, 'success');
+        return true;
+    },
+
+    /**
+     * Get product by ID
+     */
+    getProduct(productId) {
+        const inventory = this.getInventory();
+        return inventory.find(p => p.id === productId);
+    },
+
+    /**
+     * Search and filter products
+     */
+    searchProducts(searchTerm, category = '') {
+        const inventory = this.getInventory();
+        return inventory.filter(product => {
+            const matchesSearch = !searchTerm ||
+                product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                product.description.toLowerCase().includes(searchTerm.toLowerCase());
+
+            const matchesCategory = !category || product.category === category;
+
+            return matchesSearch && matchesCategory;
+        });
+    },
+
+    /**
+     * Delete individual sale record
+     */
+    deleteSaleRecord(saleId) {
+        const salesLog = this.getSalesLog();
+        const saleIndex = salesLog.findIndex(sale => sale.id === saleId);
+
+        if (saleIndex === -1) {
+            this.showNotification('Sale record not found!', 'error');
+            return false;
+        }
+
+        salesLog.splice(saleIndex, 1);
+        localStorage.setItem(this.SALES_LOG_KEY, JSON.stringify(salesLog));
+        this.renderAll();
+
+        this.showNotification('Sale record deleted successfully!', 'success');
+        return true;
+    },
+
+    /**
+     * Filter sales by date range
+     */
+    filterSalesByDate(fromDate, toDate) {
+        const salesLog = this.getSalesLog();
+
+        if (!fromDate && !toDate) {
+            return salesLog;
+        }
+
+        return salesLog.filter(sale => {
+            const saleDate = new Date(sale.timestamp);
+            const from = fromDate ? new Date(fromDate) : new Date('1900-01-01');
+            const to = toDate ? new Date(toDate + 'T23:59:59') : new Date();
+
+            return saleDate >= from && saleDate <= to;
+        });
+    },
+
+    /**
+     * Show notification
+     */
+    showNotification(message, type = 'info') {
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type}`;
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: ${type === 'success' ? '#28a745' : type === 'error' ? '#dc3545' : '#007bff'};
+            color: white;
+            padding: 15px 20px;
+            border-radius: 6px;
+            z-index: 10000;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            max-width: 300px;
+        `;
+        notification.textContent = message;
+
+        document.body.appendChild(notification);
+
+        // Remove after 4 seconds
+        setTimeout(() => {
+            notification.style.opacity = '0';
+            notification.style.transform = 'translateX(100%)';
+            notification.style.transition = 'all 0.3s ease';
+            setTimeout(() => notification.remove(), 300);
+        }, 4000);
+    }
+};
+
+// Global functions for onclick handlers
+function processSale() {
+    PhysicalSalesManager.processSale();
+}
+
+function resetInventory() {
+    PhysicalSalesManager.resetInventory();
+}
+
+function clearSalesLog() {
+    PhysicalSalesManager.clearSalesLog();
+}
+
+function exportSalesData() {
+    PhysicalSalesManager.exportSalesData();
+}
+
+// ===== RETURN PROCESSING FUNCTIONS =====
+
+/**
+ * Load return details when a sale is selected
+ */
+function loadReturnDetails() {
+    const returnSaleSelect = document.getElementById('return-sale-select');
+    const returnDetails = document.getElementById('return-details');
+    const returnInfo = document.getElementById('return-info');
+    
+    if (!returnSaleSelect.value) {
+        returnDetails.style.display = 'none';
+        return;
+    }
+    
+    const returnableSales = ReturnManager.getReturnableSales();
+    const selectedSale = returnableSales.find(sale => sale.saleId === returnSaleSelect.value);
+    
+    if (selectedSale) {
+        returnInfo.innerHTML = `
+            <div class="return-sale-info">
+                <p><strong>Product:</strong> ${selectedSale.productName}</p>
+                <p><strong>Size:</strong> ${selectedSale.size} | <strong>Color:</strong> ${selectedSale.color}</p>
+                <p><strong>Original Quantity:</strong> ${selectedSale.quantity}</p>
+                <p><strong>Available for Return:</strong> ${selectedSale.availableForReturn}</p>
+                <p><strong>Sale Price:</strong> Rs.${selectedSale.price} each</p>
+            </div>
+        `;
+        
+        const returnQuantityInput = document.getElementById('return-quantity-input');
+        returnQuantityInput.max = selectedSale.availableForReturn;
+        returnQuantityInput.value = Math.min(1, selectedSale.availableForReturn);
+        
+        returnDetails.style.display = 'block';
+    }
+}
+
+/**
+ * Process a return transaction
+ */
+function processReturn() {
+    const returnSaleSelect = document.getElementById('return-sale-select');
+    const returnQuantityInput = document.getElementById('return-quantity-input');
+    
+    if (!returnSaleSelect.value) {
+        if (typeof PhysicalSalesManager !== 'undefined') {
+            PhysicalSalesManager.showNotification('Please select a sale to return!', 'error');
+        }
+        return;
+    }
+    
+    const returnQuantity = parseInt(returnQuantityInput.value);
+    if (!returnQuantity || returnQuantity <= 0) {
+        if (typeof PhysicalSalesManager !== 'undefined') {
+            PhysicalSalesManager.showNotification('Please enter a valid return quantity!', 'error');
+        }
+        return;
+    }
+    
+    try {
+        const returnableSales = ReturnManager.getReturnableSales();
+        const selectedSale = returnableSales.find(sale => sale.saleId === returnSaleSelect.value);
+        
+        if (!selectedSale) {
+            throw new Error('Selected sale not found');
+        }
+        
+        const returnRecord = ReturnManager.processReturn(
+            selectedSale.saleId,
+            selectedSale.productId,
+            returnQuantity,
+            'Customer Return',
+            'Processed via admin dashboard'
+        );
+        
+        if (typeof PhysicalSalesManager !== 'undefined') {
+            PhysicalSalesManager.showNotification(
+                `Return processed successfully! Refund: Rs.${returnRecord.refundAmount}`, 
+                'success'
+            );
+        }
+        
+        // Reset form
+        returnSaleSelect.value = '';
+        document.getElementById('return-details').style.display = 'none';
+        
+        // Refresh displays
+        loadReturnSaleOptions();
+        if (typeof AdminDashboard !== 'undefined') {
+            AdminDashboard.loadDashboardInventory();
+            AdminDashboard.loadStockAlerts();
+        }
+        
+    } catch (error) {
+        console.error('Error processing return:', error);
+        if (typeof PhysicalSalesManager !== 'undefined') {
+            PhysicalSalesManager.showNotification(error.message, 'error');
+        }
+    }
+}
+
+/**
+ * Load returnable sales into the dropdown
+ */
+function loadReturnSaleOptions() {
+    const returnSaleSelect = document.getElementById('return-sale-select');
+    if (!returnSaleSelect) return;
+    
+    const returnableSales = ReturnManager.getReturnableSales();
+    
+    returnSaleSelect.innerHTML = '<option value="">Select sale to return...</option>';
+    
+    returnableSales.forEach(sale => {
+        const option = document.createElement('option');
+        option.value = sale.saleId;
+        option.textContent = `${sale.productName} (${sale.size}/${sale.color}) - ${sale.availableForReturn} available - Rs.${sale.price}`;
+        returnSaleSelect.appendChild(option);
+    });
+}
+
+// Physical Sales Management Functions
+function switchPhysicalTab(tabName) {
+    // Remove active class from all tabs and content
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+    // Add active class to selected tab and content
+    document.querySelector(`[onclick="switchPhysicalTab('${tabName}')"]`).classList.add('active');
+    document.getElementById(`${tabName}-tab`).classList.add('active');
+
+    // Load tab-specific data
+    if (tabName === 'inventory') {
+        PhysicalSalesManager.renderInventory();
+    } else if (tabName === 'sales') {
+        loadSaleProductOptions();
+    } else if (tabName === 'history') {
+        renderSalesHistory();
+    }
+}
+
+// Removed duplicate function - using enhanced version below
+
+function loadProductOptions() {
+    const productSelect = document.getElementById('sale-product-select');
+    const productId = parseInt(productSelect.value);
+    const optionsRow = document.getElementById('product-options-row');
+
+    if (!productId) {
+        optionsRow.style.display = 'none';
+        return;
+    }
+
+    const product = PhysicalSalesManager.getProduct(productId);
+    if (!product) return;
+
+    // Load sizes
+    const sizeSelect = document.getElementById('sale-size-select');
+    sizeSelect.innerHTML = '<option value="">Select size...</option>';
+    product.sizes.forEach(size => {
+        const option = document.createElement('option');
+        option.value = size;
+        option.textContent = `Size ${size}`;
+        sizeSelect.appendChild(option);
+    });
+
+    // Load colors
+    const colorSelect = document.getElementById('sale-color-select');
+    colorSelect.innerHTML = '<option value="">Select color...</option>';
+    product.colors.forEach(color => {
+        const option = document.createElement('option');
+        option.value = color;
+        option.textContent = color;
+        colorSelect.appendChild(option);
+    });
+
+    optionsRow.style.display = 'grid';
+}
+
+function loadSaleProductOptions() {
+    const inventory = PhysicalSalesManager.getInventory();
+    const select = document.getElementById('sale-product-select');
+
+    select.innerHTML = '<option value="">Choose a product...</option>';
+    inventory.forEach(item => {
+        if (item.stock > 0) {
+            const option = document.createElement('option');
+            option.value = item.id;
+            option.textContent = `${item.name} (${item.stock} in stock)`;
+            select.appendChild(option);
+        }
+    });
+}
+
+function processSale() {
+    const productSelect = document.getElementById('sale-product-select');
+    const sizeSelect = document.getElementById('sale-size-select');
+    const colorSelect = document.getElementById('sale-color-select');
+    const quantityInput = document.getElementById('sale-quantity-input');
+
+    const productId = parseInt(productSelect.value);
+    const size = sizeSelect ? sizeSelect.value : '';
+    const color = colorSelect ? colorSelect.value : '';
+    const quantity = parseInt(quantityInput.value) || 1;
+
+    if (!productId) {
+        PhysicalSalesManager.showNotification('Please select a product!', 'error');
+        return;
+    }
+
+    const options = { size, color, quantity };
+
+    if (PhysicalSalesManager.sellItemWithOptions(productId, quantity, options)) {
+        clearSaleForm();
+        loadSaleProductOptions(); // Refresh product options
+    }
+}
+
+function clearSaleForm() {
+    document.getElementById('sale-product-select').value = '';
+    document.getElementById('sale-size-select').value = '';
+    document.getElementById('sale-color-select').value = '';
+    document.getElementById('sale-quantity-input').value = '1';
+    document.getElementById('product-options-row').style.display = 'none';
+}
+
+function renderSalesHistory() {
+    const salesLog = PhysicalSalesManager.getSalesLog();
+    const container = document.getElementById('sales-log');
+
+    if (salesLog.length === 0) {
+        container.innerHTML = '<div class="no-data" style="padding: 40px; text-align: center;">No sales history found.</div>';
+        return;
+    }
+
+    container.innerHTML = salesLog.map(sale => {
+        const date = new Date(sale.timestamp);
+        let optionsText = '';
+        if (sale.size || sale.color) {
+            const parts = [];
+            if (sale.size) parts.push(`Size ${sale.size}`);
+            if (sale.color) parts.push(sale.color);
+            optionsText = ` • ${parts.join(', ')}`;
+        }
+
+        return `
+            <div class="sale-log-item">
+                <div class="sale-log-details">
+                    <div class="sale-log-product">${sale.productName}${optionsText}</div>
+                    <div class="sale-log-info">
+                        Qty: ${sale.quantity} • Rs ${sale.price.toLocaleString()} each • 
+                        ${date.toLocaleDateString()} at ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                </div>
+                <div class="sale-log-amount">Rs ${sale.total.toLocaleString()}</div>
+                <div class="sale-log-actions">
+                    <button onclick="deleteSaleRecord(${sale.id})" class="action-btn-small delete-btn" title="Delete Sale">🗑️</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function deleteSaleRecord(saleId) {
+    if (confirm('Are you sure you want to delete this sale record?')) {
+        PhysicalSalesManager.deleteSaleRecord(saleId);
+        renderSalesHistory();
+    }
+}
+
+function filterSalesHistory() {
+    const fromDate = document.getElementById('date-from').value;
+    const toDate = document.getElementById('date-to').value;
+
+    const filteredSales = PhysicalSalesManager.filterSalesByDate(fromDate, toDate);
+    const container = document.getElementById('sales-log');
+
+    if (filteredSales.length === 0) {
+        container.innerHTML = '<div class="no-data" style="padding: 40px; text-align: center;">No sales found for the selected date range.</div>';
+        return;
+    }
+
+    container.innerHTML = filteredSales.map(sale => {
+        const date = new Date(sale.timestamp);
+        let optionsText = '';
+        if (sale.size || sale.color) {
+            const parts = [];
+            if (sale.size) parts.push(`Size ${sale.size}`);
+            if (sale.color) parts.push(sale.color);
+            optionsText = ` • ${parts.join(', ')}`;
+        }
+
+        return `
+            <div class="sale-log-item">
+                <div class="sale-log-details">
+                    <div class="sale-log-product">${sale.productName}${optionsText}</div>
+                    <div class="sale-log-info">
+                        Qty: ${sale.quantity} • Rs ${sale.price.toLocaleString()} each • 
+                        ${date.toLocaleDateString()} at ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                </div>
+                <div class="sale-log-amount">Rs ${sale.total.toLocaleString()}</div>
+                <div class="sale-log-actions">
+                    <button onclick="deleteSaleRecord(${sale.id})" class="action-btn-small delete-btn" title="Delete Sale">🗑️</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// Dashboard quick sell function
+function processDashboardSale() {
+    try {
+        const productSelect = document.getElementById('dashboard-product-select');
+        const quantityInput = document.getElementById('dashboard-quantity-input');
+        const sizeSelect = document.getElementById('dashboard-size-select');
+        const colorSelect = document.getElementById('dashboard-color-select');
+
+        if (!productSelect || !quantityInput) {
+            console.warn('Dashboard sell elements not found');
+            return;
+        }
+
+        const productId = parseInt(productSelect.value);
+        const quantity = parseInt(quantityInput.value) || 1;
+        const size = sizeSelect ? sizeSelect.value : '';
+        const color = colorSelect ? colorSelect.value : '';
+
+        if (!productId) {
+            if (typeof PhysicalSalesManager !== 'undefined') {
+                PhysicalSalesManager.showNotification('Please select a product!', 'error');
+            } else {
+                alert('Please select a product!');
+            }
+            return;
+        }
+
+        // Create sale options with size and color
+        const saleOptions = {
+            size: size,
+            color: color,
+            quantity: quantity
+        };
+
+        if (typeof PhysicalSalesManager !== 'undefined' && PhysicalSalesManager.sellItemWithOptions(productId, quantity, saleOptions)) {
+            // Reset form
+            productSelect.value = '';
+            quantityInput.value = '1';
+            if (sizeSelect) sizeSelect.value = '';
+            if (colorSelect) colorSelect.value = '';
+            document.getElementById('dashboard-product-options').style.display = 'none';
+
+            // Refresh dashboard data
+            if (typeof AdminDashboard !== 'undefined') {
+                AdminDashboard.loadDashboardData();
+            }
+        }
+    } catch (error) {
+        console.error('Error processing dashboard sale:', error);
+    }
+}
+
+// Dashboard product options loader
+function loadDashboardProductOptions() {
+    const productSelect = document.getElementById('dashboard-product-select');
+    const productId = parseInt(productSelect.value);
+    const optionsDiv = document.getElementById('dashboard-product-options');
+
+    if (!productId) {
+        optionsDiv.style.display = 'none';
+        return;
+    }
+
+    if (typeof PhysicalSalesManager === 'undefined') {
+        console.warn('PhysicalSalesManager not found');
+        return;
+    }
+
+    const product = PhysicalSalesManager.getProduct(productId);
+    if (!product) return;
+
+    // Load sizes
+    const sizeSelect = document.getElementById('dashboard-size-select');
+    sizeSelect.innerHTML = '<option value="">Select size...</option>';
+    if (product.sizes && product.sizes.length > 0) {
+        product.sizes.forEach(size => {
+            const option = document.createElement('option');
+            option.value = size;
+            option.textContent = `Size ${size}`;
+            sizeSelect.appendChild(option);
+        });
+    }
+
+    // Load colors
+    const colorSelect = document.getElementById('dashboard-color-select');
+    colorSelect.innerHTML = '<option value="">Select color...</option>';
+    if (product.colors && product.colors.length > 0) {
+        product.colors.forEach(color => {
+            const option = document.createElement('option');
+            option.value = color;
+            option.textContent = color;
+            colorSelect.appendChild(option);
+        });
+    }
+
+    optionsDiv.style.display = 'grid';
+}
+
+// Dashboard product management functions
+function showAddProductModal() {
+    document.getElementById('physical-product-modal').style.display = 'flex';
+    document.getElementById('physical-product-modal-title').textContent = 'Add New Physical Product';
+    document.getElementById('physical-product-form').reset();
+    delete document.getElementById('physical-product-form').dataset.productId;
+}
+
+function closePhysicalProductModal() {
+    document.getElementById('physical-product-modal').style.display = 'none';
+}
+
+function editDashboardProduct(productId) {
+    if (typeof PhysicalSalesManager === 'undefined') return;
+
+    const product = PhysicalSalesManager.getProduct(productId);
+    if (!product) return;
+
+    // Fill form with product data
+    document.getElementById('physical-product-name').value = product.name;
+    document.getElementById('physical-product-price').value = product.price;
+    document.getElementById('physical-product-stock').value = product.stock;
+    document.getElementById('physical-product-category').value = product.category;
+    document.getElementById('physical-product-description').value = product.description || '';
+    document.getElementById('physical-product-image').value = product.image;
+
+    // Check sizes
+    document.querySelectorAll('input[name="sizes"]').forEach(checkbox => {
+        checkbox.checked = product.sizes && product.sizes.includes(checkbox.value);
+    });
+
+    // Check colors
+    document.querySelectorAll('input[name="colors"]').forEach(checkbox => {
+        checkbox.checked = product.colors && product.colors.includes(checkbox.value);
+    });
+
+    // Update modal title and show
+    document.getElementById('physical-product-modal-title').textContent = 'Edit Product';
+    document.getElementById('physical-product-modal').style.display = 'flex';
+
+    // Store product ID for update
+    document.getElementById('physical-product-form').dataset.productId = productId;
+}
+
+function deleteDashboardProduct(productId) {
+    if (typeof PhysicalSalesManager === 'undefined') return;
+
+    const product = PhysicalSalesManager.getProduct(productId);
+    if (!product) return;
+
+    if (confirm(`Are you sure you want to delete "${product.name}"? This action cannot be undone.`)) {
+        PhysicalSalesManager.deleteProduct(productId);
+        // Only refresh dashboard inventory, not full dashboard data
+        if (typeof AdminDashboard !== 'undefined') {
+            AdminDashboard.loadDashboardInventory();
+            AdminDashboard.loadQuickSellWidget();
+            AdminDashboard.loadStockAlerts();
+        }
+    }
+}
+// ===== TESTING FUNCTIONS =====
+function testDirectLogin() {
+    console.log('Direct login test initiated');
+
+    // Set the form values
+    document.getElementById('admin-username').value = 'admin';
+    document.getElementById('admin-password').value = 'shoepoint123';
+
+    // Directly call the login process
+    if (AuthManager.login('admin', 'shoepoint123')) {
+        console.log('Direct login successful');
+
+        // Hide login screen and show dashboard
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('admin-dashboard').style.display = 'flex';
+
+        // Initialize dashboard
+        try {
+            DataManager.initializeProducts();
+            AdminDashboard.loadDashboardData();
+            AdminDashboard.setupRealTimeNotifications();
+            WebsiteIntegration.listenForOrders();
+
+            AdminUtils.showNotification('Direct login successful!');
+            console.log('Dashboard initialized successfully');
+        } catch (error) {
+            console.error('Error initializing dashboard:', error);
+            AdminUtils.showNotification('Error: ' + error.message, 'error');
+        }
+    } else {
+        console.log('Direct login failed');
+        AdminUtils.showNotification('Direct login failed', 'error');
+    }
+}
+
+// Enhanced inventory rendering with CRUD operations
+PhysicalSalesManager.renderInventory = function () {
+    console.log('Rendering inventory...');
+    const inventory = this.getInventory();
+    const grid = document.getElementById('inventory-grid');
+
+    console.log('Inventory items:', inventory.length);
+    console.log('Grid element:', grid);
+
+    if (!grid) {
+        console.warn('Inventory grid element not found');
+        return;
+    }
+
+    if (inventory.length === 0) {
+        grid.innerHTML = '<div class="no-data" style="padding: 40px; text-align: center; grid-column: 1/-1;">No products found. Add your first product to get started!</div>';
+        return;
+    }
+
+    grid.innerHTML = inventory.map(item => {
+        const stockClass = item.stock === 0 ? 'out' : item.stock < 5 ? 'low' : '';
+        const stockText = item.stock === 0 ? 'Out of Stock' : `${item.stock} in stock`;
+
+        return `
+            <div class="inventory-item">
+                <div class="inventory-item-header">
+                    <h4 class="inventory-item-title">${item.name}</h4>
+                    <div class="inventory-item-actions">
+                        <button onclick="editProduct(${item.id})" class="action-btn-small edit-btn" title="Edit Product">✏️</button>
+                        <button onclick="deleteProduct(${item.id})" class="action-btn-small delete-btn" title="Delete Product">🗑️</button>
+                    </div>
+                </div>
+                
+                <div class="inventory-item-details">
+                    <div class="detail-item">
+                        <div class="detail-label">Price:</div>
+                        <div class="detail-value">Rs ${item.price.toLocaleString()}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Stock:</div>
+                        <div class="detail-value stock-count ${stockClass}">${stockText}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Category:</div>
+                        <div class="detail-value">${item.category}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Image:</div>
+                        <div class="detail-value">${item.image}</div>
+                    </div>
+                </div>
+                
+                ${item.description ? `<div class="inventory-description">${item.description}</div>` : ''}
+                
+                <div class="inventory-options">
+                    <div class="options-row">
+                        <div class="option-group">
+                            <div class="option-label">Available Sizes:</div>
+                            <div class="option-tags">
+                                ${item.sizes.map(size => `<span class="option-tag">Size ${size}</span>`).join('')}
+                            </div>
+                        </div>
+                        <div class="option-group">
+                            <div class="option-label">Available Colors:</div>
+                            <div class="option-tags">
+                                ${item.colors.map(color => `<span class="option-tag">${color}</span>`).join('')}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+};
+
+// Product management functions
+function editProduct(productId) {
+    const product = PhysicalSalesManager.getProduct(productId);
+    if (!product) return;
+
+    // Fill form with product data
+    document.getElementById('physical-product-name').value = product.name;
+    document.getElementById('physical-product-price').value = product.price;
+    document.getElementById('physical-product-stock').value = product.stock;
+    document.getElementById('physical-product-category').value = product.category;
+    document.getElementById('physical-product-description').value = product.description || '';
+    document.getElementById('physical-product-image').value = product.image;
+
+    // Check sizes
+    document.querySelectorAll('input[name="sizes"]').forEach(checkbox => {
+        checkbox.checked = product.sizes.includes(checkbox.value);
+    });
+
+    // Check colors
+    document.querySelectorAll('input[name="colors"]').forEach(checkbox => {
+        checkbox.checked = product.colors.includes(checkbox.value);
+    });
+
+    // Update modal title and show
+    document.getElementById('physical-product-modal-title').textContent = 'Edit Product';
+    document.getElementById('physical-product-modal').style.display = 'flex';
+
+    // Store product ID for update
+    document.getElementById('physical-product-form').dataset.productId = productId;
+}
+
+function deleteProduct(productId) {
+    const product = PhysicalSalesManager.getProduct(productId);
+    if (!product) return;
+
+    if (confirm(`Are you sure you want to delete "${product.name}"? This action cannot be undone.`)) {
+        PhysicalSalesManager.deleteProduct(productId);
+        PhysicalSalesManager.renderInventory();
+    }
+}
+
+// ===== EVENT MANAGEMENT SYSTEM =====
+const EventManager = {
+    registeredEvents: new Set(),
+    
+    registerOnce(element, event, handler, key) {
+        if (!this.registeredEvents.has(key)) {
+            element.addEventListener(event, handler);
+            this.registeredEvents.add(key);
+        }
+    },
+    
+    preventDuplicateSubmission(button, operation) {
+        if (button.disabled) return false;
+        
+        button.disabled = true;
+        const originalText = button.textContent;
+        button.textContent = 'Processing...';
+        
+        return operation().finally(() => {
+            button.disabled = false;
+            button.textContent = originalText;
+        });
+    }
+};
+
+// ===== SEARCH MANAGER =====
+const SearchManager = {
+    currentSearchTerm: '',
+    currentCategory: '',
+    
+    /**
+     * Filter products based on search term and category
+     */
+    filterProducts(searchTerm = '', category = '') {
+        this.currentSearchTerm = searchTerm.toLowerCase();
+        this.currentCategory = category;
+        
+        if (typeof PhysicalSalesManager === 'undefined') {
+            console.warn('PhysicalSalesManager not available for filtering');
+            return [];
+        }
+        
+        const allProducts = PhysicalSalesManager.getInventory();
+        
+        return allProducts.filter(product => {
+            // Text search across name, description, and category
+            const matchesSearch = !this.currentSearchTerm || 
+                product.name.toLowerCase().includes(this.currentSearchTerm) ||
+                (product.description && product.description.toLowerCase().includes(this.currentSearchTerm)) ||
+                (product.category && product.category.toLowerCase().includes(this.currentSearchTerm));
+            
+            // Category filter
+            const matchesCategory = !this.currentCategory || 
+                (product.category && product.category === this.currentCategory) ||
+                (this.currentCategory === 'Uncategorized' && (!product.category || product.category === 'Uncategorized'));
+            
+            return matchesSearch && matchesCategory;
+        });
+    },
+    
+    /**
+     * Update display with filtered products
+     */
+    updateDisplay(containerId, filteredProducts) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        
+        if (filteredProducts.length === 0) {
+            container.innerHTML = `
+                <div class="no-results">
+                    <p>No products found matching your search criteria.</p>
+                    <p>Try adjusting your search terms or category filter.</p>
+                </div>
+            `;
+            return;
+        }
+        
+        // Re-render the products using the existing render function
+        if (containerId === 'dashboard-inventory-list') {
+            this.renderDashboardInventory(filteredProducts);
+        } else if (containerId === 'inventory-grid') {
+            this.renderPhysicalInventory(filteredProducts);
+        }
+    },
+    
+    /**
+     * Render filtered products for dashboard
+     */
+    renderDashboardInventory(products) {
+        const container = document.getElementById('dashboard-inventory-list');
+        if (!container) return;
+        
+        container.innerHTML = products.map(product => {
+            const stockClass = product.stock === 0 ? 'out-of-stock' : product.stock < 2 ? 'low-stock' : 'in-stock';
+            const stockText = product.stock === 0 ? 'Out of Stock' : `${product.stock} in stock`;
+            
+            return `
+                <div class="inventory-item">
+                    <div class="item-info">
+                        <h4>${product.name}</h4>
+                        <p class="item-category">${product.category || 'Uncategorized'}</p>
+                        <p class="item-price">Rs.${product.price}</p>
+                        <span class="stock-count ${stockClass}">${stockText}</span>
+                    </div>
+                    <div class="item-actions">
+                        <button onclick="editDashboardProduct(${product.id})" class="edit-btn">✏️ Edit</button>
+                        <button onclick="deleteDashboardProduct(${product.id})" class="delete-btn">🗑️ Delete</button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    },
+    
+    /**
+     * Render filtered products for physical sales section
+     */
+    renderPhysicalInventory(products) {
+        const container = document.getElementById('inventory-grid');
+        if (!container) return;
+        
+        container.innerHTML = products.map(product => {
+            const stockClass = product.stock === 0 ? 'out-of-stock' : product.stock < 2 ? 'low-stock' : 'in-stock';
+            const stockText = product.stock === 0 ? 'Out of Stock' : `${product.stock} in stock`;
+            
+            return `
+                <div class="inventory-item">
+                    <div class="item-header">
+                        <h4>${product.name}</h4>
+                        <span class="item-category">${product.category || 'Uncategorized'}</span>
+                    </div>
+                    <div class="item-details">
+                        <p class="item-price">Rs.${product.price}</p>
+                        <p class="item-sizes">Sizes: ${product.sizes.join(', ')}</p>
+                        <p class="item-colors">Colors: ${product.colors.join(', ')}</p>
+                        <span class="stock-count ${stockClass}">${stockText}</span>
+                    </div>
+                    <div class="item-actions">
+                        <button onclick="editProduct(${product.id})" class="edit-btn">✏️ Edit</button>
+                        <button onclick="deleteProduct(${product.id})" class="delete-btn">🗑️ Delete</button>
+                        <button onclick="PhysicalSalesManager.sellItem(${product.id})" class="sell-btn" ${product.stock === 0 ? 'disabled' : ''}>
+                            💰 Sell 1 Unit
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+};
+
+// ===== RETURN MANAGER =====
+const ReturnManager = {
+    RETURNS_KEY: 'shoepoint_returns_log',
+    
+    /**
+     * Get all returns from localStorage
+     */
+    getReturns() {
+        try {
+            const returns = localStorage.getItem(this.RETURNS_KEY);
+            return returns ? JSON.parse(returns) : [];
+        } catch (error) {
+            console.error('Error loading returns:', error);
+            return [];
+        }
+    },
+    
+    /**
+     * Save returns to localStorage
+     */
+    saveReturns(returns) {
+        try {
+            localStorage.setItem(this.RETURNS_KEY, JSON.stringify(returns));
+        } catch (error) {
+            console.error('Error saving returns:', error);
+        }
+    },
+    
+    /**
+     * Process a return transaction
+     */
+    processReturn(originalSaleId, productId, returnQuantity, reason = 'Customer Request', notes = '') {
+        if (typeof PhysicalSalesManager === 'undefined') {
+            throw new Error('PhysicalSalesManager not available');
+        }
+        
+        // Get the original sale
+        const salesLog = PhysicalSalesManager.getSalesLog();
+        const originalSale = salesLog.find(sale => sale.saleId === originalSaleId);
+        
+        if (!originalSale) {
+            throw new Error('Original sale not found');
+        }
+        
+        // Validate return quantity
+        const existingReturns = this.getReturns().filter(ret => ret.originalSaleId === originalSaleId);
+        const totalReturned = existingReturns.reduce((sum, ret) => sum + ret.returnQuantity, 0);
+        
+        if (totalReturned + returnQuantity > originalSale.quantity) {
+            throw new Error(`Cannot return ${returnQuantity} items. Only ${originalSale.quantity - totalReturned} items available for return.`);
+        }
+        
+        // Create return record
+        const returnRecord = {
+            returnId: 'ret_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+            originalSaleId: originalSaleId,
+            productId: productId,
+            productName: originalSale.productName,
+            size: originalSale.size,
+            color: originalSale.color,
+            returnQuantity: returnQuantity,
+            originalQuantity: originalSale.quantity,
+            reason: reason,
+            refundAmount: (originalSale.price * returnQuantity),
+            processedBy: 'admin',
+            processedAt: Date.now(),
+            notes: notes
+        };
+        
+        // Save return record
+        const returns = this.getReturns();
+        returns.push(returnRecord);
+        this.saveReturns(returns);
+        
+        // Update product stock
+        PhysicalSalesManager.updateProductStock(productId, returnQuantity);
+        
+        // Update sales log with return information
+        this.updateSalesLogWithReturn(originalSaleId, returnRecord);
+        
+        return returnRecord;
+    },
+    
+    /**
+     * Update sales log to reflect return
+     */
+    updateSalesLogWithReturn(saleId, returnRecord) {
+        if (typeof PhysicalSalesManager === 'undefined') return;
+        
+        const salesLog = PhysicalSalesManager.getSalesLog();
+        const saleIndex = salesLog.findIndex(sale => sale.saleId === saleId);
+        
+        if (saleIndex !== -1) {
+            if (!salesLog[saleIndex].returns) {
+                salesLog[saleIndex].returns = [];
+            }
+            
+            salesLog[saleIndex].returns.push(returnRecord);
+            
+            // Calculate net quantities and amounts
+            const totalReturned = salesLog[saleIndex].returns.reduce((sum, ret) => sum + ret.returnQuantity, 0);
+            const totalRefunded = salesLog[saleIndex].returns.reduce((sum, ret) => sum + ret.refundAmount, 0);
+            
+            salesLog[saleIndex].netQuantity = salesLog[saleIndex].quantity - totalReturned;
+            salesLog[saleIndex].netAmount = salesLog[saleIndex].total - totalRefunded;
+            
+            // Save updated sales log
+            PhysicalSalesManager.saveSalesLog(salesLog);
+        }
+    },
+    
+    /**
+     * Get returnable sales (sales that can still have returns processed)
+     */
+    getReturnableSales() {
+        if (typeof PhysicalSalesManager === 'undefined') return [];
+        
+        const salesLog = PhysicalSalesManager.getSalesLog();
+        const returns = this.getReturns();
+        
+        return salesLog.filter(sale => {
+            const saleReturns = returns.filter(ret => ret.originalSaleId === sale.saleId);
+            const totalReturned = saleReturns.reduce((sum, ret) => sum + ret.returnQuantity, 0);
+            return totalReturned < sale.quantity; // Still has items that can be returned
+        }).map(sale => {
+            const saleReturns = returns.filter(ret => ret.originalSaleId === sale.saleId);
+            const totalReturned = saleReturns.reduce((sum, ret) => sum + ret.returnQuantity, 0);
+            
+            return {
+                ...sale,
+                availableForReturn: sale.quantity - totalReturned,
+                totalReturned: totalReturned
+            };
+        });
+    },
+    
+    /**
+     * Get return history
+     */
+    getReturnHistory() {
+        return this.getReturns().sort((a, b) => b.processedAt - a.processedAt);
+    }
+};
+
+// Global function for loading dashboard inventory
+function loadDashboardInventory() {
+    if (typeof AdminDashboard !== 'undefined') {
+        AdminDashboard.loadDashboardInventory();
+    }
+}
+
+// ===== GLOBAL SEARCH AND FILTER FUNCTIONS =====
+
+/**
+ * Filter dashboard inventory based on search and category
+ */
+function filterDashboardInventory() {
+    const searchInput = document.getElementById('product-search');
+    const categoryFilter = document.getElementById('category-filter');
+    
+    if (!searchInput || !categoryFilter) return;
+    
+    const searchTerm = searchInput.value;
+    const category = categoryFilter.value;
+    
+    const filteredProducts = SearchManager.filterProducts(searchTerm, category);
+    SearchManager.updateDisplay('dashboard-inventory-list', filteredProducts);
+}
+
+/**
+ * Filter physical sales inventory based on search and category
+ */
+function filterPhysicalInventory() {
+    const searchInput = document.getElementById('physical-product-search');
+    const categoryFilter = document.getElementById('physical-category-filter');
+    
+    if (!searchInput || !categoryFilter) return;
+    
+    const searchTerm = searchInput.value;
+    const category = categoryFilter.value;
+    
+    const filteredProducts = SearchManager.filterProducts(searchTerm, category);
+    SearchManager.updateDisplay('inventory-grid', filteredProducts);
+}
+
+/**
+ * Initialize search functionality for both sections
+ */
+function initializeSearchFunctionality() {
+    // Dashboard search
+    const dashboardSearch = document.getElementById('product-search');
+    const dashboardCategoryFilter = document.getElementById('category-filter');
+    
+    if (dashboardSearch) {
+        dashboardSearch.addEventListener('input', filterDashboardInventory);
+    }
+    
+    if (dashboardCategoryFilter) {
+        dashboardCategoryFilter.addEventListener('change', filterDashboardInventory);
+    }
+    
+    // Physical sales search (different IDs to avoid conflicts)
+    const physicalSearch = document.querySelector('#inventory-tab input[placeholder="Search products..."]');
+    const physicalCategoryFilter = document.querySelector('#inventory-tab select');
+    
+    if (physicalSearch) {
+        physicalSearch.addEventListener('input', filterPhysicalInventory);
+    }
+    
+    if (physicalCategoryFilter) {
+        physicalCategoryFilter.addEventListener('change', filterPhysicalInventory);
+    }
+}
+
+// ===== ENHANCED FORM SUBMISSION HANDLER =====
+document.addEventListener('DOMContentLoaded', function () {
+    const physicalProductForm = document.getElementById('physical-product-form');
+    if (physicalProductForm) {
+        // Remove any existing listeners first
+        physicalProductForm.removeEventListener('submit', handlePhysicalProductSubmit);
+        physicalProductForm.addEventListener('submit', handlePhysicalProductSubmit);
+    }
+});
+
+function handlePhysicalProductSubmit(e) {
+    console.log('handlePhysicalProductSubmit called');
+    e.preventDefault();
+    
+    const submitButton = this.querySelector('button[type="submit"]') || this.querySelector('.primary-btn');
+    console.log('Submit button found:', submitButton);
+    
+    // Prevent double submission
+    if (submitButton.disabled) return;
+    
+    submitButton.disabled = true;
+    const originalText = submitButton.textContent;
+    submitButton.textContent = 'Processing...';
+    
+    // Helper function to reset button
+    const resetButton = () => {
+        submitButton.disabled = false;
+        submitButton.textContent = originalText;
+    };
+    
+    try {
+        const formData = new FormData(this);
+        const productData = {
+            name: formData.get('name'),
+            price: formData.get('price'),
+            stock: formData.get('stock'),
+            category: formData.get('category') || 'Uncategorized', // Make category optional
+            description: formData.get('description'),
+            image: formData.get('image') || 'default.webp',
+            sizes: formData.getAll('sizes'),
+            colors: formData.getAll('colors')
+        };
+
+        console.log('Form data collected:', productData);
+        console.log('Name:', productData.name);
+        console.log('Price:', productData.price);
+        console.log('Stock:', productData.stock);
+        console.log('Sizes:', productData.sizes);
+        console.log('Colors:', productData.colors);
+
+        // Enhanced validation with better error messages
+        if (!productData.name || !productData.price || !productData.stock) {
+            console.log('Validation failed: missing required fields');
+            if (typeof PhysicalSalesManager !== 'undefined') {
+                PhysicalSalesManager.showNotification('Please fill in all required fields (Name, Price, Stock)!', 'error');
+            } else {
+                alert('Please fill in all required fields (Name, Price, Stock)!');
+            }
+            resetButton();
+            return;
+        }
+
+        if (productData.sizes.length === 0) {
+            console.log('Validation failed: no sizes selected');
+            if (typeof PhysicalSalesManager !== 'undefined') {
+                PhysicalSalesManager.showNotification('Please select at least one size!', 'error');
+            } else {
+                alert('Please select at least one size!');
+            }
+            resetButton();
+            return;
+        }
+
+        if (productData.colors.length === 0) {
+            console.log('Validation failed: no colors selected');
+            if (typeof PhysicalSalesManager !== 'undefined') {
+                PhysicalSalesManager.showNotification('Please select at least one color!', 'error');
+            } else {
+                alert('Please select at least one color!');
+            }
+            resetButton();
+            return;
+        }
+
+        if (typeof PhysicalSalesManager === 'undefined') {
+            alert('Physical Sales Manager not available');
+            resetButton();
+            return;
+        }
+
+        console.log('Validation passed, processing product...');
+
+        // Check if editing or adding
+        const productId = this.dataset.productId;
+        if (productId) {
+            // Update existing product
+            console.log('Updating product with ID:', productId);
+            PhysicalSalesManager.updateProduct(parseInt(productId), productData);
+            PhysicalSalesManager.showNotification('Product updated successfully!', 'success');
+            delete this.dataset.productId;
+        } else {
+            // Add new product
+            console.log('Adding new product...');
+            const newProduct = PhysicalSalesManager.addProduct(productData);
+            console.log('New product added:', newProduct);
+            PhysicalSalesManager.showNotification('Product added successfully!', 'success');
+        }
+
+        closePhysicalProductModal();
+
+        // Refresh dashboard inventory and data
+        if (typeof AdminDashboard !== 'undefined') {
+            AdminDashboard.loadDashboardInventory();
+            AdminDashboard.loadQuickSellWidget();
+            AdminDashboard.loadStockAlerts();
+        }
+        
+        // Refresh physical sales inventory if on that section
+        if (typeof PhysicalSalesManager !== 'undefined') {
+            PhysicalSalesManager.renderInventory();
+        }
+        
+        console.log('Product processing completed successfully');
+        resetButton();
+        
+    } catch (error) {
+        console.error('Error processing product:', error);
+        if (typeof PhysicalSalesManager !== 'undefined') {
+            PhysicalSalesManager.showNotification('Error processing product. Please try again.', 'error');
+        } else {
+            alert('Error processing product. Please try again.');
+        }
+        resetButton();
+    }
+}

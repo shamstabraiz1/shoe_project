@@ -18,12 +18,14 @@ class FirebaseDatabase {
      */
     async waitForFirebase() {
         return new Promise((resolve) => {
-            if (window.firebaseDB && window.firebaseAuth) {
-                this.db = window.firebaseDB;
-                this.auth = window.firebaseAuth;
+            // Check if Firebase is already initialized
+            if (window.firebaseApp && window.firebaseDB && window.firebaseAuth) {
+                this.db = window.firebaseDB; // This is the Firestore instance
+                this.auth = window.firebaseAuth; // This is the Auth instance
                 this.isInitialized = true;
                 resolve();
             } else {
+                // Wait for Firebase to be ready
                 window.addEventListener('firebaseReady', (event) => {
                     this.db = event.detail.db;
                     this.auth = event.detail.auth;
@@ -201,6 +203,25 @@ class FirebaseDatabase {
         } catch (error) {
             console.error('❌ Failed to load orders:', error);
             return [];
+        }
+    }
+
+    /**
+     * Delete order from Firebase
+     */
+    async deleteOrder(orderId) {
+        try {
+            await this.ensureReady();
+            const { doc, deleteDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+            
+            const orderRef = doc(this.db, 'orders', orderId);
+            await deleteDoc(orderRef);
+            
+            console.log('✅ Order deleted from Firebase with ID:', orderId);
+            return true;
+        } catch (error) {
+            console.error('❌ Failed to delete order:', error);
+            return false;
         }
     }
 
@@ -395,11 +416,11 @@ class FirebaseDatabase {
 }
 
 // Create global instance
-const firebaseDB = new FirebaseDatabase();
+const firebaseDatabase = new FirebaseDatabase();
 
 // Make it globally available
 window.FirebaseDatabase = FirebaseDatabase;
-window.firebaseDB = firebaseDB;
+window.firebaseDatabase = firebaseDatabase; // Use different name to avoid conflict
 
 // Export for module usage
 if (typeof module !== 'undefined' && module.exports) {

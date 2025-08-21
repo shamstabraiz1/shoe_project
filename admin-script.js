@@ -33,13 +33,46 @@ const AdminUtils = {
      * Format date for display
      */
     formatDate: (date) => {
-        return new Date(date).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
+        if (!date) return 'N/A';
+        
+        try {
+            let dateObj;
+            
+            // Handle Firestore Timestamp objects
+            if (date && typeof date === 'object' && date.toDate && typeof date.toDate === 'function') {
+                // Firestore Timestamp object
+                dateObj = date.toDate();
+            } else if (typeof date === 'string') {
+                // ISO string format
+                dateObj = new Date(date);
+            } else if (typeof date === 'number') {
+                // Timestamp number
+                dateObj = new Date(date);
+            } else if (date instanceof Date) {
+                // Already a Date object
+                dateObj = date;
+            } else {
+                // Try to create Date object
+                dateObj = new Date(date);
+            }
+            
+            // Check if date is valid
+            if (isNaN(dateObj.getTime())) {
+                console.warn('Invalid date value:', date);
+                return 'Invalid Date';
+            }
+            
+            return dateObj.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        } catch (error) {
+            console.error('Error formatting date:', error, 'Date value:', date);
+            return 'Invalid Date';
+        }
     },
 
     /**
@@ -166,6 +199,25 @@ const WebsiteIntegration = {
                 }
             }
         });
+    },
+
+    listenForRealtimeOrders() {
+        if (window.firebaseDatabase && typeof window.firebaseDatabase.db !== 'undefined') {
+            import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js').then(({ collection, onSnapshot }) => {
+                const ordersRef = collection(window.firebaseDatabase.db, 'orders');
+                onSnapshot(ordersRef, (snapshot) => {
+                    snapshot.docChanges().forEach((change) => {
+                        if (change.type === 'added') {
+                            AdminUtils.showNotification('New order placed!', 'success');
+                            // Optionally reload orders table
+                            if (typeof AdminDashboard !== 'undefined' && AdminDashboard.currentSection === 'orders') {
+                                AdminDashboard.loadOrders();
+                            }
+                        }
+                    });
+                });
+            });
+        }
     }
 };
 
@@ -441,6 +493,11 @@ const AdminDashboard = {
         } catch (error) {
             console.error('Error during dashboard initialization:', error);
             alert('Error initializing dashboard: ' + error.message);
+        }
+
+        // After dashboard initialization
+        if (typeof AdminDashboard !== 'undefined' && typeof AdminDashboard.listenForRealtimeOrders === 'function') {
+            AdminDashboard.listenForRealtimeOrders();
         }
     },
 
@@ -761,11 +818,53 @@ const AdminDashboard = {
     /**
      * Load dashboard data
      */
-    loadDashboardData() {
-        this.loadStats();
-        this.loadRecentOrders();
-        this.loadPhysicalSalesData();
-        this.loadReturnData();
+    async loadDashboardData() {
+        let orders = [];
+        if (window.firebaseDatabase && typeof window.firebaseDatabase.loadOrders === 'function') {
+            try {
+                orders = await window.firebaseDatabase.loadOrders();
+            } catch (e) {
+                console.error('Failed to load orders from Firebase:', e);
+                orders = [];
+            }
+        } else {
+            orders = []; // Don't use localStorage fallback
+        }
+        
+        // Apply the same filtering logic as loadOrders
+        const realOrders = orders.filter(order => {
+            const customerName = order.customerInfo?.name || '';
+            const customerEmail = order.customerInfo?.email || '';
+            
+            // Filter out test orders
+            const isTestOrder = customerName === 'Test Customer' || 
+                               customerName === 'Guest' || 
+                               customerName === 'VIP Customer' ||
+                               customerEmail.includes('test') ||
+                               customerEmail.includes('demo') ||
+                               customerName.toLowerCase().includes('test') ||
+                               customerName.toLowerCase().includes('demo');
+            
+            // Filter out orders without proper customer info
+            const hasValidCustomerInfo = customerName && 
+                                        customerEmail && 
+                                        customerEmail.includes('@') &&
+                                        order.customerInfo?.phone &&
+                                        order.customerInfo?.address?.street;
+            
+            return !isTestOrder && hasValidCustomerInfo;
+        });
+        
+        const totalRevenue = realOrders.reduce((sum, order) => sum + (order.payment?.amount || 0), 0);
+        const totalOrders = realOrders.length;
+        
+        const totalOrdersEl = document.getElementById('total-orders');
+        const onlineRevenueEl = document.getElementById('online-revenue');
+        
+        if (totalOrdersEl) totalOrdersEl.textContent = totalOrders;
+        if (onlineRevenueEl) onlineRevenueEl.textContent = AdminUtils.formatCurrency(totalRevenue);
+        
+        console.log(`📊 Dashboard stats: ${totalOrders} real orders, ${AdminUtils.formatCurrency(totalRevenue)} revenue`);
     },
 
     /**
@@ -1194,12 +1293,65 @@ const AdminDashboard = {
     /**
      * Load orders
      */
-    loadOrders() {
-        const orders = DataManager.getOrders();
+    async loadOrders() {
+        let orders = [];
+        
+        // Clear localStorage orders on first load to prevent old test data
+        if (localStorage.getItem('localStorage_orders_cleared') !== 'true') {
+            localStorage.removeItem(ADMIN_CONFIG.STORAGE_KEYS.orders);
+            localStorage.setItem('localStorage_orders_cleared', 'true');
+            console.log('🧹 Cleared localStorage orders to prevent old test data');
+        }
+        
+        if (window.firebaseDatabase && typeof window.firebaseDatabase.loadOrders === 'function') {
+            try {
+                orders = await window.firebaseDatabase.loadOrders();
+                console.log('✅ Loaded orders from Firebase:', orders.length);
+            } catch (e) {
+                console.error('Failed to load orders from Firebase:', e);
+                // Don't fallback to localStorage to prevent old test data
+                orders = [];
+            }
+        } else {
+            console.log('⚠️ Firebase not available, using empty orders array');
+            orders = []; // Don't use localStorage fallback
+        }
+        
         const container = document.getElementById('orders-table');
 
-        if (orders.length === 0) {
+        if (!orders || orders.length === 0) {
             container.innerHTML = '<p class="no-data">No orders found. Orders will appear here once customers make purchases.</p>';
+            return;
+        }
+
+        // Enhanced filtering to remove test/guest orders and ensure only real orders
+        const realOrders = orders.filter(order => {
+            const customerName = order.customerInfo?.name || '';
+            const customerEmail = order.customerInfo?.email || '';
+            
+            // Filter out test orders
+            const isTestOrder = customerName === 'Test Customer' || 
+                               customerName === 'Guest' || 
+                               customerName === 'VIP Customer' ||
+                               customerEmail.includes('test') ||
+                               customerEmail.includes('demo') ||
+                               customerName.toLowerCase().includes('test') ||
+                               customerName.toLowerCase().includes('demo');
+            
+            // Filter out orders without proper customer info
+            const hasValidCustomerInfo = customerName && 
+                                        customerEmail && 
+                                        customerEmail.includes('@') &&
+                                        order.customerInfo?.phone &&
+                                        order.customerInfo?.address?.street;
+            
+            return !isTestOrder && hasValidCustomerInfo;
+        });
+
+        console.log(`📊 Filtered orders: ${orders.length} total, ${realOrders.length} real orders`);
+
+        if (realOrders.length === 0) {
+            container.innerHTML = '<p class="no-data">No real orders found. Only orders with valid customer information are displayed.</p>';
             return;
         }
 
@@ -1208,7 +1360,10 @@ const AdminDashboard = {
                 <thead>
                     <tr>
                         <th>Order ID</th>
-                        <th>Customer</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Address</th>
                         <th>Items</th>
                         <th>Amount</th>
                         <th>Status</th>
@@ -1216,25 +1371,94 @@ const AdminDashboard = {
                     </tr>
                 </thead>
                 <tbody>
-                    ${orders.map(order => `
+                    ${realOrders.map(order => {
+                        const info = order.customerInfo || {};
+                        const address = info.address ? `${info.address.street}, ${info.address.city}, ${info.address.state}, ${info.address.postalCode}, ${info.address.country}` : '';
+                        return `
                         <tr>
                             <td><strong>#${order.orderId}</strong></td>
-                            <td>${order.customerInfo?.name || 'Guest'}</td>
-                            <td>${order.items.length} item(s)</td>
+                            <td>${info.name || 'Guest'}</td>
+                            <td>${info.email || ''}</td>
+                            <td>${info.phone || ''}</td>
+                            <td>${address}</td>
+                            <td>
+                                ${order.items.map(item => `
+                                    <div class="order-item-detail">
+                                        <strong>${item.name}</strong> x${item.quantity}
+                                        <br><small>${AdminUtils.formatCurrency(item.price)} each</small>
+                                    </div>
+                                `).join('')}
+                            </td>
                             <td>${AdminUtils.formatCurrency(order.payment.amount)}</td>
-                            <td><span class="status-badge status-${order.status}">${order.status}</span></td>
-                            <td>${AdminUtils.formatDate(order.createdAt)}</td>
+                            <td><span class="status-badge status-${order.status}">${order.status}</span><br>
+                                <button class="btn btn-xs btn-clear" onclick="AdminDashboard.clearOrder('${order.id}')">Clear</button>
+                            </td>
+                            <td>${order.createdAt ? AdminUtils.formatDate(order.createdAt) : '-'}</td>
                         </tr>
-                    `).join('')}
+                        `;
+                    }).join('')}
                 </tbody>
             </table>
         `;
     },
 
     /**
-     * Load customers
+     * Load customers from Firebase orders
      */
-    loadCustomers() {
+    async loadCustomers() {
+        console.log('🔄 Loading customers from Firebase...');
+        
+        try {
+            // Check if Firebase is available
+            if (!window.firebaseDatabase || typeof window.firebaseDatabase.loadOrders !== 'function') {
+                console.error('Firebase not available for loading customers');
+                // Fallback to old method
+                this.loadCustomersFallback();
+                return;
+            }
+
+            // Load all orders from Firebase
+            const orders = await window.firebaseDatabase.loadOrders();
+            console.log('📋 Loaded orders for customer analysis:', orders.length);
+
+            // Filter out test orders and orders without customer info
+            const validOrders = orders.filter(order => {
+                const customerInfo = order.customerInfo;
+                if (!customerInfo || !customerInfo.email) return false;
+                
+                // Filter out test customers
+                const name = customerInfo.name?.toLowerCase() || '';
+                const email = customerInfo.email?.toLowerCase() || '';
+                if (name.includes('test') || email.includes('test') || 
+                    name.includes('demo') || email.includes('demo') ||
+                    name === 'guest' || name === 'test customer' || name === 'vip customer') {
+                    return false;
+                }
+                
+                return true;
+            });
+
+            console.log('✅ Valid orders for customer analysis:', validOrders.length);
+
+            // Process customer data
+            const customers = this.processCustomerData(validOrders);
+            console.log('👥 Processed customers:', customers.length);
+
+            // Display customers
+            this.displayCustomers(customers);
+
+        } catch (error) {
+            console.error('Error loading customers from Firebase:', error);
+            // Fallback to old method
+            this.loadCustomersFallback();
+        }
+    },
+
+    /**
+     * Fallback method using old DataManager
+     */
+    loadCustomersFallback() {
+        console.log('🔄 Using fallback customer loading method...');
         const customers = DataManager.getCustomers();
         const container = document.getElementById('customers-table');
 
@@ -1272,12 +1496,1038 @@ const AdminDashboard = {
     },
 
     /**
+     * Process order data to extract customer information
+     */
+    processCustomerData(orders) {
+        const customersMap = new Map();
+
+        orders.forEach(order => {
+            const customerInfo = order.customerInfo;
+            if (!customerInfo || !customerInfo.email) return;
+
+            const email = customerInfo.email;
+            const orderAmount = order.payment?.amount || 0;
+
+            if (!customersMap.has(email)) {
+                customersMap.set(email, {
+                    id: order.customerId || email,
+                    name: customerInfo.name || 'Unknown',
+                    email: email,
+                    phone: customerInfo.phone || '',
+                    address: this.formatAddress(customerInfo),
+                    totalOrders: 0,
+                    totalSpent: 0,
+                    firstOrder: null,
+                    lastOrder: null,
+                    orderHistory: [],
+                    preferredCategories: new Map(),
+                    averageOrderValue: 0
+                });
+            }
+
+            const customer = customersMap.get(email);
+            customer.totalOrders++;
+            customer.totalSpent += orderAmount;
+            customer.orderHistory.push({
+                id: order.id,
+                amount: orderAmount,
+                date: order.createdAt,
+                items: order.items || []
+            });
+
+            // Track first and last order dates
+            if (!customer.firstOrder || order.createdAt < customer.firstOrder) {
+                customer.firstOrder = order.createdAt;
+            }
+            if (!customer.lastOrder || order.createdAt > customer.lastOrder) {
+                customer.lastOrder = order.createdAt;
+            }
+
+            // Track preferred categories
+            if (order.items) {
+                order.items.forEach(item => {
+                    const category = item.category || 'Uncategorized';
+                    customer.preferredCategories.set(category, (customer.preferredCategories.get(category) || 0) + 1);
+                });
+            }
+        });
+
+        // Calculate average order value and get top category for each customer
+        const customers = Array.from(customersMap.values()).map(customer => {
+            customer.averageOrderValue = customer.totalSpent / customer.totalOrders;
+            
+            // Get top preferred category
+            let topCategory = 'None';
+            let maxCount = 0;
+            customer.preferredCategories.forEach((count, category) => {
+                if (count > maxCount) {
+                    maxCount = count;
+                    topCategory = category;
+                }
+            });
+            customer.topCategory = topCategory;
+
+            // Determine customer status
+            if (customer.totalOrders >= 5) {
+                customer.status = 'VIP';
+                customer.statusColor = '#28a745';
+            } else if (customer.totalOrders >= 2) {
+                customer.status = 'Returning';
+                customer.statusColor = '#17a2b8';
+            } else {
+                customer.status = 'New';
+                customer.statusColor = '#6c757d';
+            }
+
+            return customer;
+        });
+
+        // Sort by total spent (highest first)
+        return customers.sort((a, b) => b.totalSpent - a.totalSpent);
+    },
+
+    /**
+     * Format customer address
+     */
+    formatAddress(customerInfo) {
+        const parts = [
+            customerInfo.addressStreet,
+            customerInfo.addressCity,
+            customerInfo.addressState,
+            customerInfo.addressPostal,
+            customerInfo.addressCountry
+        ].filter(part => part && part.trim());
+
+        return parts.length > 0 ? parts.join(', ') : 'Address not provided';
+    },
+
+    /**
+     * Display customers in enhanced table
+     */
+    displayCustomers(customers) {
+        const container = document.getElementById('customers-table');
+
+        if (customers.length === 0) {
+            container.innerHTML = `
+                <div class="no-data-container">
+                    <p class="no-data">No customers found. Customer data will appear here after orders are placed.</p>
+                    <button onclick="AdminDashboard.loadCustomers()" class="secondary-btn">
+                        <span class="action-icon">🔄</span>
+                        Refresh Customers
+                    </button>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = `
+            <div class="customers-header">
+                <div class="customers-stats">
+                    <div class="stat-item">
+                        <span class="stat-label">Total Customers</span>
+                        <span class="stat-value">${customers.length}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">VIP Customers</span>
+                        <span class="stat-value">${customers.filter(c => c.status === 'VIP').length}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Total Revenue</span>
+                        <span class="stat-value">${AdminUtils.formatCurrency(customers.reduce((sum, c) => sum + c.totalSpent, 0))}</span>
+                    </div>
+                </div>
+                <div class="customers-actions">
+                    <button onclick="AdminDashboard.loadCustomers()" class="secondary-btn">
+                        <span class="action-icon">🔄</span>
+                        Refresh
+                    </button>
+                    <button onclick="AdminDashboard.exportCustomerData()" class="secondary-btn">
+                        <span class="action-icon">📊</span>
+                        Export Data
+                    </button>
+                </div>
+            </div>
+            
+            <div class="table-container">
+                <table class="table customers-table">
+                    <thead>
+                        <tr>
+                            <th>Customer Info</th>
+                            <th>Contact</th>
+                            <th>Orders & Spending</th>
+                            <th>Customer Status</th>
+                            <th>Preferred Category</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${customers.map(customer => `
+                            <tr>
+                                <td class="customer-info">
+                                    <div class="customer-name">
+                                        <strong>${customer.name}</strong>
+                                        <span class="customer-id">#${customer.id.substring(0, 8)}</span>
+                                    </div>
+                                    <div class="customer-address">
+                                        <small>${customer.address}</small>
+                                    </div>
+                                </td>
+                                <td class="customer-contact">
+                                    <div class="contact-item">
+                                        <span class="contact-label">📧 Email:</span>
+                                        <span class="contact-value">${customer.email}</span>
+                                    </div>
+                                    <div class="contact-item">
+                                        <span class="contact-label">📞 Phone:</span>
+                                        <span class="contact-value">${customer.phone || 'N/A'}</span>
+                                    </div>
+                                </td>
+                                <td class="customer-orders">
+                                    <div class="order-stats">
+                                        <div class="stat-row">
+                                            <span class="stat-label">Orders:</span>
+                                            <span class="stat-value">${customer.totalOrders}</span>
+                                        </div>
+                                        <div class="stat-row">
+                                            <span class="stat-label">Total Spent:</span>
+                                            <span class="stat-value">${AdminUtils.formatCurrency(customer.totalSpent)}</span>
+                                        </div>
+                                        <div class="stat-row">
+                                            <span class="stat-label">Avg Order:</span>
+                                            <span class="stat-value">${AdminUtils.formatCurrency(customer.averageOrderValue)}</span>
+                                        </div>
+                                        <div class="stat-row">
+                                            <span class="stat-label">Last Order:</span>
+                                            <span class="stat-value">${customer.lastOrder ? AdminUtils.formatDate(customer.lastOrder) : 'N/A'}</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="customer-status">
+                                    <span class="status-badge" style="background-color: ${customer.statusColor}; color: white;">
+                                        ${customer.status}
+                                    </span>
+                                    <div class="status-details">
+                                        <small>First: ${customer.firstOrder ? AdminUtils.formatDate(customer.firstOrder) : 'N/A'}</small>
+                                    </div>
+                                </td>
+                                <td class="customer-category">
+                                    <span class="category-badge">${customer.topCategory}</span>
+                                </td>
+                                <td class="customer-actions">
+                                    <button onclick="AdminDashboard.viewCustomerHistory('${customer.email}')" class="action-btn" title="View Order History">
+                                        <span class="action-icon">📋</span>
+                                    </button>
+                                    <button onclick="AdminDashboard.contactCustomer('${customer.email}', '${customer.phone}')" class="action-btn" title="Contact Customer">
+                                        <span class="action-icon">📞</span>
+                                    </button>
+                                    <button onclick="AdminDashboard.exportCustomerData('${customer.email}')" class="action-btn" title="Export Customer Data">
+                                        <span class="action-icon">📊</span>
+                                    </button>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    },
+
+    /**
+     * View customer order history
+     */
+    viewCustomerHistory(customerEmail) {
+        console.log('📋 Viewing order history for:', customerEmail);
+        // This would open a modal with detailed order history
+        alert(`Order history for ${customerEmail} would be displayed here.\n\nThis feature can be expanded to show detailed order history in a modal.`);
+    },
+
+    /**
+     * Contact customer
+     */
+    contactCustomer(customerEmail, customerPhone) {
+        console.log('📞 Contacting customer:', customerEmail, customerPhone);
+        
+        let contactInfo = `Email: ${customerEmail}`;
+        if (customerPhone) {
+            contactInfo += `\nPhone: ${customerPhone}`;
+        }
+        
+        alert(`Contact Information:\n\n${contactInfo}\n\nYou can use this information to contact the customer.`);
+    },
+
+    /**
+     * Export customer data
+     */
+    exportCustomerData(customerEmail = null) {
+        console.log('📊 Exporting customer data...');
+        
+        if (customerEmail) {
+            // Export single customer data
+            alert(`Exporting data for customer: ${customerEmail}\n\nThis feature can be expanded to generate CSV/PDF reports.`);
+        } else {
+            // Export all customer data
+            alert('Exporting all customer data...\n\nThis feature can be expanded to generate comprehensive CSV/PDF reports.');
+        }
+    },
+
+    /**
      * Load analytics
      */
     loadAnalytics() {
         // Analytics implementation would go here
         // For now, showing placeholder
         console.log('Analytics section loaded');
+        
+        // Load comprehensive analytics
+        this.loadComprehensiveAnalytics();
+    },
+
+    /**
+     * Load comprehensive analytics with real data
+     */
+    async loadComprehensiveAnalytics() {
+        try {
+            console.log('📊 Loading comprehensive analytics...');
+            
+            // Get orders from Firebase
+            let orders = [];
+            if (window.firebaseDatabase && typeof window.firebaseDatabase.loadOrders === 'function') {
+                orders = await window.firebaseDatabase.loadOrders();
+            } else {
+                console.log('Firebase not available, using fallback data');
+                return;
+            }
+
+            // Filter out test orders (same logic as loadOrders)
+            orders = orders.filter(order => {
+                const customerName = order.customerInfo?.name?.toLowerCase() || '';
+                const customerEmail = order.customerInfo?.email?.toLowerCase() || '';
+                
+                return !customerName.includes('test') && 
+                       !customerName.includes('demo') && 
+                       !customerName.includes('guest') &&
+                       !customerEmail.includes('test') && 
+                       !customerEmail.includes('demo') &&
+                       customerName !== 'test customer' &&
+                       customerName !== 'vip customer' &&
+                       customerName !== 'guest' &&
+                       order.customerInfo?.name &&
+                       order.customerInfo?.email;
+            });
+
+            if (orders.length === 0) {
+                this.displayAnalyticsPlaceholder();
+                return;
+            }
+
+            // Process analytics data
+            const analyticsData = this.processAnalyticsData(orders);
+            
+            // Display analytics
+            this.displayAnalytics(analyticsData);
+            
+        } catch (error) {
+            console.error('Error loading analytics:', error);
+            this.displayAnalyticsPlaceholder();
+        }
+    },
+
+    /**
+     * Process orders data for analytics
+     */
+    processAnalyticsData(orders) {
+        const analytics = {
+            overview: this.calculateOverviewMetrics(orders),
+            revenue: this.calculateRevenueAnalytics(orders),
+            products: this.calculateProductAnalytics(orders),
+            customers: this.calculateCustomerAnalytics(orders),
+            trends: this.calculateTrendAnalytics(orders),
+            geographic: this.calculateGeographicAnalytics(orders)
+        };
+
+        return analytics;
+    },
+
+    /**
+     * Calculate overview metrics
+     */
+    calculateOverviewMetrics(orders) {
+        const totalRevenue = orders.reduce((sum, order) => sum + order.totals.total, 0);
+        const totalOrders = orders.length;
+        const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+        
+        // Calculate unique customers
+        const uniqueCustomers = new Set(orders.map(order => order.customerInfo.email)).size;
+        
+        // Calculate growth (comparing last 30 days vs previous 30 days)
+        const now = new Date();
+        const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
+        
+        const recentOrders = orders.filter(order => new Date(order.createdAt) >= thirtyDaysAgo);
+        const previousOrders = orders.filter(order => {
+            const orderDate = new Date(order.createdAt);
+            return orderDate >= sixtyDaysAgo && orderDate < thirtyDaysAgo;
+        });
+        
+        const recentRevenue = recentOrders.reduce((sum, order) => sum + order.totals.total, 0);
+        const previousRevenue = previousOrders.reduce((sum, order) => sum + order.totals.total, 0);
+        const revenueGrowth = previousRevenue > 0 ? ((recentRevenue - previousRevenue) / previousRevenue) * 100 : 0;
+
+        return {
+            totalRevenue,
+            totalOrders,
+            averageOrderValue,
+            uniqueCustomers,
+            revenueGrowth,
+            recentOrders: recentOrders.length,
+            previousOrders: previousOrders.length
+        };
+    },
+
+    /**
+     * Calculate revenue analytics
+     */
+    calculateRevenueAnalytics(orders) {
+        // Monthly revenue breakdown
+        const monthlyRevenue = {};
+        const dailyRevenue = {};
+        
+        orders.forEach(order => {
+            const date = new Date(order.createdAt);
+            const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+            const dayKey = date.toISOString().split('T')[0];
+            
+            monthlyRevenue[monthKey] = (monthlyRevenue[monthKey] || 0) + order.totals.total;
+            dailyRevenue[dayKey] = (dailyRevenue[dayKey] || 0) + order.totals.total;
+        });
+
+        // Payment method analysis
+        const paymentMethods = {};
+        orders.forEach(order => {
+            const method = order.payment.method;
+            paymentMethods[method] = (paymentMethods[method] || 0) + 1;
+        });
+
+        return {
+            monthlyRevenue,
+            dailyRevenue,
+            paymentMethods
+        };
+    },
+
+    /**
+     * Calculate product analytics
+     */
+    calculateProductAnalytics(orders) {
+        const productStats = {};
+        const categoryStats = {};
+        
+        orders.forEach(order => {
+            order.items.forEach(item => {
+                // Product stats
+                if (!productStats[item.name]) {
+                    productStats[item.name] = {
+                        name: item.name,
+                        quantity: 0,
+                        revenue: 0,
+                        orders: 0
+                    };
+                }
+                productStats[item.name].quantity += item.quantity;
+                productStats[item.name].revenue += item.price * item.quantity;
+                productStats[item.name].orders += 1;
+                
+                // Category stats
+                const category = item.category || 'Uncategorized';
+                if (!categoryStats[category]) {
+                    categoryStats[category] = {
+                        name: category,
+                        quantity: 0,
+                        revenue: 0,
+                        orders: 0
+                    };
+                }
+                categoryStats[category].quantity += item.quantity;
+                categoryStats[category].revenue += item.price * item.quantity;
+                categoryStats[category].orders += 1;
+            });
+        });
+
+        // Sort by revenue
+        const topProducts = Object.values(productStats)
+            .sort((a, b) => b.revenue - a.revenue)
+            .slice(0, 10);
+            
+        const topCategories = Object.values(categoryStats)
+            .sort((a, b) => b.revenue - a.revenue);
+
+        return {
+            topProducts,
+            topCategories,
+            totalProducts: Object.keys(productStats).length,
+            totalCategories: Object.keys(categoryStats).length
+        };
+    },
+
+    /**
+     * Calculate customer analytics
+     */
+    calculateCustomerAnalytics(orders) {
+        const customerStats = {};
+        
+        orders.forEach(order => {
+            const email = order.customerInfo.email;
+            if (!customerStats[email]) {
+                customerStats[email] = {
+                    email: email,
+                    name: order.customerInfo.name,
+                    orders: 0,
+                    totalSpent: 0,
+                    firstOrder: order.createdAt,
+                    lastOrder: order.createdAt,
+                    averageOrderValue: 0
+                };
+            }
+            
+            customerStats[email].orders += 1;
+            customerStats[email].totalSpent += order.totals.total;
+            customerStats[email].lastOrder = order.createdAt;
+        });
+
+        // Calculate averages and categorize customers
+        Object.values(customerStats).forEach(customer => {
+            customer.averageOrderValue = customer.totalSpent / customer.orders;
+            
+            // Categorize customers
+            if (customer.orders >= 5) {
+                customer.category = 'VIP';
+                customer.categoryColor = '#28a745';
+            } else if (customer.orders >= 2) {
+                customer.category = 'Returning';
+                customer.categoryColor = '#17a2b8';
+            } else {
+                customer.category = 'New';
+                customer.categoryColor = '#6c757d';
+            }
+        });
+
+        const topCustomers = Object.values(customerStats)
+            .sort((a, b) => b.totalSpent - a.totalSpent)
+            .slice(0, 10);
+
+        const customerCategories = {
+            VIP: Object.values(customerStats).filter(c => c.category === 'VIP').length,
+            Returning: Object.values(customerStats).filter(c => c.category === 'Returning').length,
+            New: Object.values(customerStats).filter(c => c.category === 'New').length
+        };
+
+        return {
+            topCustomers,
+            customerCategories,
+            totalCustomers: Object.keys(customerStats).length,
+            averageCustomerValue: Object.values(customerStats).reduce((sum, c) => sum + c.totalSpent, 0) / Object.keys(customerStats).length
+        };
+    },
+
+    /**
+     * Calculate trend analytics
+     */
+    calculateTrendAnalytics(orders) {
+        // Daily order trends (last 30 days)
+        const dailyOrders = {};
+        const now = new Date();
+        const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        
+        // Initialize all days with 0
+        for (let i = 0; i < 30; i++) {
+            const date = new Date(thirtyDaysAgo.getTime() + i * 24 * 60 * 60 * 1000);
+            const dayKey = date.toISOString().split('T')[0];
+            dailyOrders[dayKey] = 0;
+        }
+        
+        // Count orders per day
+        orders.forEach(order => {
+            const orderDate = new Date(order.createdAt);
+            if (orderDate >= thirtyDaysAgo) {
+                const dayKey = orderDate.toISOString().split('T')[0];
+                if (dailyOrders[dayKey] !== undefined) {
+                    dailyOrders[dayKey]++;
+                }
+            }
+        });
+
+        return {
+            dailyOrders
+        };
+    },
+
+    /**
+     * Calculate geographic analytics
+     */
+    calculateGeographicAnalytics(orders) {
+        const cityStats = {};
+        const stateStats = {};
+        
+        orders.forEach(order => {
+            const city = order.customerInfo.addressCity || 'Unknown';
+            const state = order.customerInfo.addressState || 'Unknown';
+            
+            // City stats
+            if (!cityStats[city]) {
+                cityStats[city] = {
+                    name: city,
+                    orders: 0,
+                    revenue: 0
+                };
+            }
+            cityStats[city].orders += 1;
+            cityStats[city].revenue += order.totals.total;
+            
+            // State stats
+            if (!stateStats[state]) {
+                stateStats[state] = {
+                    name: state,
+                    orders: 0,
+                    revenue: 0
+                };
+            }
+            stateStats[state].orders += 1;
+            stateStats[state].revenue += order.totals.total;
+        });
+
+        const topCities = Object.values(cityStats)
+            .sort((a, b) => b.revenue - a.revenue)
+            .slice(0, 5);
+            
+        const topStates = Object.values(stateStats)
+            .sort((a, b) => b.revenue - a.revenue)
+            .slice(0, 5);
+
+        return {
+            topCities,
+            topStates
+        };
+    },
+
+    /**
+     * Display analytics in the dashboard
+     */
+    displayAnalytics(analyticsData) {
+        const analyticsSection = document.getElementById('analytics-section');
+        if (!analyticsSection) return;
+
+        const analyticsContent = analyticsSection.querySelector('.analytics-content');
+        if (!analyticsContent) return;
+
+        analyticsContent.innerHTML = `
+            <!-- Overview Cards -->
+            <div class="analytics-overview">
+                <h3>📊 Key Performance Indicators</h3>
+                <div class="overview-grid">
+                    <div class="overview-card">
+                        <div class="overview-icon">💰</div>
+                        <div class="overview-content">
+                            <div class="overview-value">${AdminUtils.formatCurrency(analyticsData.overview.totalRevenue)}</div>
+                            <div class="overview-label">Total Revenue</div>
+                            <div class="overview-trend ${analyticsData.overview.revenueGrowth >= 0 ? 'positive' : 'negative'}">
+                                ${analyticsData.overview.revenueGrowth >= 0 ? '↗' : '↘'} ${Math.abs(analyticsData.overview.revenueGrowth).toFixed(1)}%
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="overview-card">
+                        <div class="overview-icon">📦</div>
+                        <div class="overview-content">
+                            <div class="overview-value">${analyticsData.overview.totalOrders}</div>
+                            <div class="overview-label">Total Orders</div>
+                            <div class="overview-trend">
+                                ${analyticsData.overview.recentOrders} this month
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="overview-card">
+                        <div class="overview-icon">👥</div>
+                        <div class="overview-content">
+                            <div class="overview-value">${analyticsData.overview.uniqueCustomers}</div>
+                            <div class="overview-label">Unique Customers</div>
+                            <div class="overview-trend">
+                                ${analyticsData.customers.customerCategories.New} new
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="overview-card">
+                        <div class="overview-icon">📈</div>
+                        <div class="overview-content">
+                            <div class="overview-value">${AdminUtils.formatCurrency(analyticsData.overview.averageOrderValue)}</div>
+                            <div class="overview-label">Average Order Value</div>
+                            <div class="overview-trend">
+                                Per order
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Section -->
+            <div class="analytics-charts">
+                <div class="chart-row">
+                    <div class="chart-container">
+                        <h3>📈 Revenue Trend (Last 30 Days)</h3>
+                        <div class="chart-placeholder">
+                            ${this.generateRevenueChart(analyticsData.revenue.dailyRevenue)}
+                        </div>
+                    </div>
+                    
+                    <div class="chart-container">
+                        <h3>🎯 Top Product Categories</h3>
+                        <div class="chart-placeholder">
+                            ${this.generateCategoryChart(analyticsData.products.topCategories)}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="chart-row">
+                    <div class="chart-container">
+                        <h3>📊 Order Trends (Daily)</h3>
+                        <div class="chart-placeholder">
+                            ${this.generateOrderTrendChart(analyticsData.trends.dailyOrders)}
+                        </div>
+                    </div>
+                    
+                    <div class="chart-container">
+                        <h3>💳 Payment Methods</h3>
+                        <div class="chart-placeholder">
+                            ${this.generatePaymentChart(analyticsData.revenue.paymentMethods)}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detailed Reports -->
+            <div class="analytics-reports">
+                <div class="reports-row">
+                    <div class="report-container">
+                        <h3>🏆 Top Products</h3>
+                        <div class="report-table">
+                            ${this.generateTopProductsTable(analyticsData.products.topProducts)}
+                        </div>
+                    </div>
+                    
+                    <div class="report-container">
+                        <h3>👑 Top Customers</h3>
+                        <div class="report-table">
+                            ${this.generateTopCustomersTable(analyticsData.customers.topCustomers)}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="reports-row">
+                    <div class="report-container">
+                        <h3>🌍 Geographic Distribution</h3>
+                        <div class="report-table">
+                            ${this.generateGeographicTable(analyticsData.geographic.topCities)}
+                        </div>
+                    </div>
+                    
+                    <div class="report-container">
+                        <h3>📋 Customer Segments</h3>
+                        <div class="report-table">
+                            ${this.generateCustomerSegmentsTable(analyticsData.customers.customerCategories)}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analytics Actions -->
+            <div class="analytics-actions">
+                <button onclick="AdminDashboard.exportAnalyticsData()" class="secondary-btn">
+                    <span class="action-icon">📊</span>
+                    Export Analytics
+                </button>
+                <button onclick="AdminDashboard.refreshAnalytics()" class="secondary-btn">
+                    <span class="action-icon">🔄</span>
+                    Refresh Data
+                </button>
+            </div>
+        `;
+    },
+
+    /**
+     * Display analytics placeholder when no data
+     */
+    displayAnalyticsPlaceholder() {
+        const analyticsSection = document.getElementById('analytics-section');
+        if (!analyticsSection) return;
+
+        const analyticsContent = analyticsSection.querySelector('.analytics-content');
+        if (!analyticsContent) return;
+
+        analyticsContent.innerHTML = `
+            <div class="analytics-placeholder">
+                <div class="placeholder-icon">📊</div>
+                <h3>No Analytics Data Available</h3>
+                <p>Analytics will appear here once you have orders in your system.</p>
+                <p>Place some test orders to see comprehensive analytics and insights.</p>
+            </div>
+        `;
+    },
+
+    /**
+     * Generate revenue chart HTML
+     */
+    generateRevenueChart(dailyRevenue) {
+        const days = Object.keys(dailyRevenue).sort();
+        const values = days.map(day => dailyRevenue[day]);
+        const maxValue = Math.max(...values);
+        
+        return `
+            <div class="simple-chart">
+                ${days.map((day, index) => {
+                    const value = values[index];
+                    const height = maxValue > 0 ? (value / maxValue) * 100 : 0;
+                    return `
+                        <div class="chart-bar" style="height: ${height}%">
+                            <div class="bar-tooltip">
+                                ${day}: ${AdminUtils.formatCurrency(value)}
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        `;
+    },
+
+    /**
+     * Generate category chart HTML
+     */
+    generateCategoryChart(categories) {
+        const totalRevenue = categories.reduce((sum, cat) => sum + cat.revenue, 0);
+        
+        return `
+            <div class="category-chart">
+                ${categories.slice(0, 5).map(category => {
+                    const percentage = totalRevenue > 0 ? (category.revenue / totalRevenue) * 100 : 0;
+                    return `
+                        <div class="category-item">
+                            <div class="category-name">${category.name}</div>
+                            <div class="category-bar">
+                                <div class="category-fill" style="width: ${percentage}%"></div>
+                            </div>
+                            <div class="category-value">${AdminUtils.formatCurrency(category.revenue)} (${percentage.toFixed(1)}%)</div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        `;
+    },
+
+    /**
+     * Generate order trend chart HTML
+     */
+    generateOrderTrendChart(dailyOrders) {
+        const days = Object.keys(dailyOrders).sort();
+        const values = days.map(day => dailyOrders[day]);
+        const maxValue = Math.max(...values);
+        
+        return `
+            <div class="simple-chart line-chart">
+                ${days.map((day, index) => {
+                    const value = values[index];
+                    const height = maxValue > 0 ? (value / maxValue) * 100 : 0;
+                    return `
+                        <div class="chart-point" style="height: ${height}%">
+                            <div class="point-tooltip">
+                                ${day}: ${value} orders
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        `;
+    },
+
+    /**
+     * Generate payment method chart HTML
+     */
+    generatePaymentChart(paymentMethods) {
+        const total = Object.values(paymentMethods).reduce((sum, count) => sum + count, 0);
+        
+        return `
+            <div class="payment-chart">
+                ${Object.entries(paymentMethods).map(([method, count]) => {
+                    const percentage = total > 0 ? (count / total) * 100 : 0;
+                    const methodName = method === 'stripe' ? 'Credit Card' : 'PayPal';
+                    return `
+                        <div class="payment-item">
+                            <div class="payment-name">${methodName}</div>
+                            <div class="payment-bar">
+                                <div class="payment-fill" style="width: ${percentage}%"></div>
+                            </div>
+                            <div class="payment-value">${count} orders (${percentage.toFixed(1)}%)</div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        `;
+    },
+
+    /**
+     * Generate top products table HTML
+     */
+    generateTopProductsTable(products) {
+        if (products.length === 0) {
+            return '<div class="no-data">No product data available</div>';
+        }
+
+        return `
+            <table class="analytics-table">
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>Orders</th>
+                        <th>Quantity</th>
+                        <th>Revenue</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${products.map(product => `
+                        <tr>
+                            <td>${product.name}</td>
+                            <td>${product.orders}</td>
+                            <td>${product.quantity}</td>
+                            <td>${AdminUtils.formatCurrency(product.revenue)}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+    },
+
+    /**
+     * Generate top customers table HTML
+     */
+    generateTopCustomersTable(customers) {
+        if (customers.length === 0) {
+            return '<div class="no-data">No customer data available</div>';
+        }
+
+        return `
+            <table class="analytics-table">
+                <thead>
+                    <tr>
+                        <th>Customer</th>
+                        <th>Orders</th>
+                        <th>Total Spent</th>
+                        <th>Category</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${customers.map(customer => `
+                        <tr>
+                            <td>
+                                <div class="customer-info">
+                                    <div class="customer-name">${customer.name}</div>
+                                    <div class="customer-email">${customer.email}</div>
+                                </div>
+                            </td>
+                            <td>${customer.orders}</td>
+                            <td>${AdminUtils.formatCurrency(customer.totalSpent)}</td>
+                            <td>
+                                <span class="category-badge" style="background: ${customer.categoryColor}">
+                                    ${customer.category}
+                                </span>
+                            </td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+    },
+
+    /**
+     * Generate geographic table HTML
+     */
+    generateGeographicTable(cities) {
+        if (cities.length === 0) {
+            return '<div class="no-data">No geographic data available</div>';
+        }
+
+        return `
+            <table class="analytics-table">
+                <thead>
+                    <tr>
+                        <th>City</th>
+                        <th>Orders</th>
+                        <th>Revenue</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${cities.map(city => `
+                        <tr>
+                            <td>${city.name}</td>
+                            <td>${city.orders}</td>
+                            <td>${AdminUtils.formatCurrency(city.revenue)}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+    },
+
+    /**
+     * Generate customer segments table HTML
+     */
+    generateCustomerSegmentsTable(segments) {
+        const total = Object.values(segments).reduce((sum, count) => sum + count, 0);
+        
+        return `
+            <table class="analytics-table">
+                <thead>
+                    <tr>
+                        <th>Segment</th>
+                        <th>Count</th>
+                        <th>Percentage</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${Object.entries(segments).map(([segment, count]) => {
+                        const percentage = total > 0 ? (count / total) * 100 : 0;
+                        const color = segment === 'VIP' ? '#28a745' : segment === 'Returning' ? '#17a2b8' : '#6c757d';
+                        return `
+                            <tr>
+                                <td>
+                                    <span class="segment-badge" style="background: ${color}">
+                                        ${segment}
+                                    </span>
+                                </td>
+                                <td>${count}</td>
+                                <td>${percentage.toFixed(1)}%</td>
+                            </tr>
+                        `;
+                    }).join('')}
+                </tbody>
+            </table>
+        `;
+    },
+
+    /**
+     * Export analytics data
+     */
+    exportAnalyticsData() {
+        console.log('📊 Exporting analytics data...');
+        AdminUtils.showNotification('Analytics export feature coming soon!', 'info');
+    },
+
+    /**
+     * Refresh analytics data
+     */
+    refreshAnalytics() {
+        console.log('🔄 Refreshing analytics data...');
+        this.loadComprehensiveAnalytics();
+        AdminUtils.showNotification('Analytics data refreshed!', 'success');
     },
 
     /**
@@ -1393,12 +2643,202 @@ const AdminDashboard = {
                 AdminUtils.showNotification('Error deleting product. Please try again.', 'error');
             }
         }
+    },
+
+    updateOrderStatus: async function(orderId, newStatus) {
+        if (window.firebaseDatabase && typeof window.firebaseDatabase.db !== 'undefined') {
+            const { doc, updateDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+            const orderRef = doc(window.firebaseDatabase.db, 'orders', orderId);
+            await updateDoc(orderRef, { status: newStatus, updatedAt: new Date() });
+            AdminUtils.showNotification('Order status updated!', 'success');
+            this.loadOrders();
+        }
+    },
+
+    clearOrder: async function(orderId) {
+        console.log('🗑️ Attempting to delete order:', orderId);
+        console.log('Firebase DB available:', !!window.firebaseDatabase);
+        console.log('deleteOrder function available:', !!(window.firebaseDatabase && typeof window.firebaseDatabase.deleteOrder === 'function'));
+        
+        if (window.firebaseDatabase && typeof window.firebaseDatabase.deleteOrder === 'function') {
+            try {
+                const success = await window.firebaseDatabase.deleteOrder(orderId);
+                if (success) {
+                    AdminUtils.showNotification('Order deleted successfully!', 'success');
+                    this.loadOrders();
+                } else {
+                    AdminUtils.showNotification('Failed to delete order', 'error');
+                }
+            } catch (error) {
+                console.error('Error deleting order:', error);
+                AdminUtils.showNotification('Error deleting order: ' + error.message, 'error');
+            }
+        } else {
+            console.error('Firebase not available for order deletion');
+            AdminUtils.showNotification('Firebase not available. Please refresh the page and try again.', 'error');
+        }
+    },
+
+    /**
+     * Clear all test orders from Firebase (emergency cleanup)
+     */
+    clearAllTestOrders: async function() {
+        console.log('🧹 Attempting to clear all test orders...');
+        console.log('Firebase DB available:', !!window.firebaseDatabase);
+        console.log('loadOrders function available:', !!(window.firebaseDatabase && typeof window.firebaseDatabase.loadOrders === 'function'));
+        console.log('deleteOrder function available:', !!(window.firebaseDatabase && typeof window.firebaseDatabase.deleteOrder === 'function'));
+        
+        if (!window.firebaseDatabase || typeof window.firebaseDatabase.loadOrders !== 'function' || typeof window.firebaseDatabase.deleteOrder !== 'function') {
+            console.error('Firebase not available for clearing test orders');
+            AdminUtils.showNotification('Firebase not available. Please refresh the page and try again.', 'error');
+            return;
+        }
+
+        try {
+            const allOrders = await window.firebaseDatabase.loadOrders();
+            console.log('📋 Total orders loaded:', allOrders.length);
+            
+            const testOrders = allOrders.filter(order => {
+                const customerName = order.customerInfo?.name || '';
+                const customerEmail = order.customerInfo?.email || '';
+                
+                return customerName === 'Test Customer' || 
+                       customerName === 'Guest' || 
+                       customerName === 'VIP Customer' ||
+                       customerEmail.includes('test') ||
+                       customerEmail.includes('demo') ||
+                       customerName.toLowerCase().includes('test') ||
+                       customerName.toLowerCase().includes('demo');
+            });
+
+            console.log('🧪 Test orders found:', testOrders.length);
+
+            if (testOrders.length === 0) {
+                AdminUtils.showNotification('No test orders found to delete', 'success');
+                return;
+            }
+
+            let deletedCount = 0;
+            for (const order of testOrders) {
+                console.log('🗑️ Deleting test order:', order.id, order.customerInfo?.name);
+                const success = await window.firebaseDatabase.deleteOrder(order.id);
+                if (success) {
+                    deletedCount++;
+                    console.log('✅ Successfully deleted order:', order.id);
+                } else {
+                    console.log('❌ Failed to delete order:', order.id);
+                }
+            }
+
+            AdminUtils.showNotification(`Deleted ${deletedCount} test orders`, 'success');
+            this.loadOrders();
+        } catch (error) {
+            console.error('Error clearing test orders:', error);
+            AdminUtils.showNotification('Error clearing test orders: ' + error.message, 'error');
+        }
+    },
+
+    /**
+     * Debug function to show all orders in console
+     */
+    debugOrders: async function() {
+        if (!window.firebaseDatabase || typeof window.firebaseDatabase.loadOrders !== 'function') {
+            console.log('❌ Firebase not available');
+            return;
+        }
+
+        try {
+            const allOrders = await window.firebaseDatabase.loadOrders();
+            console.log('🔍 All orders from Firebase:', allOrders);
+            
+            allOrders.forEach((order, index) => {
+                console.log(`Order ${index + 1}:`, {
+                    id: order.id,
+                    orderId: order.orderId,
+                    customerName: order.customerInfo?.name,
+                    customerEmail: order.customerInfo?.email,
+                    amount: order.payment?.amount,
+                    createdAt: order.createdAt
+                });
+            });
+        } catch (error) {
+            console.error('Error loading orders for debug:', error);
+        }
+    },
+
+    /**
+     * Delete ALL orders from Firebase (nuclear option)
+     */
+    deleteAllOrders: async function() {
+        console.log('💥 Attempting to delete ALL orders from Firebase...');
+        console.log('Firebase DB available:', !!window.firebaseDatabase);
+        console.log('loadOrders function available:', !!(window.firebaseDatabase && typeof window.firebaseDatabase.loadOrders === 'function'));
+        console.log('deleteOrder function available:', !!(window.firebaseDatabase && typeof window.firebaseDatabase.deleteOrder === 'function'));
+        
+        if (!window.firebaseDatabase || typeof window.firebaseDatabase.loadOrders !== 'function' || typeof window.firebaseDatabase.deleteOrder !== 'function') {
+            console.error('Firebase not available for deleting all orders');
+            AdminUtils.showNotification('Firebase not available. Please refresh the page and try again.', 'error');
+            return;
+        }
+
+        // Show confirmation dialog
+        const confirmed = confirm('⚠️ WARNING: This will delete ALL orders from Firebase!\n\nThis action cannot be undone. Are you sure you want to continue?');
+        if (!confirmed) {
+            console.log('❌ User cancelled deletion of all orders');
+            return;
+        }
+
+        try {
+            const allOrders = await window.firebaseDatabase.loadOrders();
+            console.log('📋 Total orders to delete:', allOrders.length);
+            
+            if (allOrders.length === 0) {
+                AdminUtils.showNotification('No orders found to delete', 'success');
+                return;
+            }
+
+            let deletedCount = 0;
+            for (const order of allOrders) {
+                console.log('🗑️ Deleting order:', order.id, order.customerInfo?.name);
+                const success = await window.firebaseDatabase.deleteOrder(order.id);
+                if (success) {
+                    deletedCount++;
+                    console.log('✅ Successfully deleted order:', order.id);
+                } else {
+                    console.log('❌ Failed to delete order:', order.id);
+                }
+            }
+
+            AdminUtils.showNotification(`Successfully deleted ${deletedCount} orders from Firebase`, 'success');
+            this.loadOrders(); // Refresh the orders display
+        } catch (error) {
+            console.error('Error deleting all orders:', error);
+            AdminUtils.showNotification('Error deleting all orders: ' + error.message, 'error');
+        }
     }
 };
 
 // ===== INITIALIZATION =====
-document.addEventListener('DOMContentLoaded', () => {
-    AdminDashboard.init();
+document.addEventListener('DOMContentLoaded', async () => {
+    // Wait for Firebase to be ready before initializing dashboard
+    if (window.firebaseDatabase && window.firebaseAuth) {
+        console.log('🔥 Firebase already available, initializing dashboard...');
+        AdminDashboard.init();
+    } else {
+        console.log('⏳ Waiting for Firebase to be ready...');
+        window.addEventListener('firebaseReady', (event) => {
+            console.log('🔥 Firebase ready, initializing dashboard...');
+            AdminDashboard.init();
+        });
+        
+        // Fallback: if Firebase doesn't load within 5 seconds, initialize anyway
+        setTimeout(() => {
+            if (!window.firebaseDatabase) {
+                console.warn('⚠️ Firebase not available after 5 seconds, initializing with fallback...');
+                AdminDashboard.init();
+            }
+        }, 5000);
+    }
 });
 
 // ===== GLOBAL FUNCTIONS =====

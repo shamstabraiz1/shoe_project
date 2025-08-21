@@ -316,6 +316,20 @@
                         <h2>Order Management</h2>
                         <p>Track and manage customer orders</p>
                     </div>
+                    <div class="section-actions">
+                        <button onclick="AdminDashboard.debugOrders()" class="secondary-btn" style="background: #17a2b8; color: white; margin-right: 10px;">
+                            <span class="action-icon">🔍</span>
+                            Debug Orders
+                        </button>
+                        <button onclick="AdminDashboard.clearAllTestOrders()" class="secondary-btn" style="background: #dc3545; color: white; margin-right: 10px;">
+                            <span class="action-icon">🧹</span>
+                            Clear Test Orders
+                        </button>
+                        <button onclick="AdminDashboard.deleteAllOrders()" class="secondary-btn" style="background: #8B0000; color: white;">
+                            <span class="action-icon">💥</span>
+                            Delete ALL Orders
+                        </button>
+                    </div>
                     <div class="section-filters">
                         <select id="order-status-filter">
                             <option value="all">All Orders</option>

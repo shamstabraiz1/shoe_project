@@ -16,7 +16,7 @@ const CONFIG = {
             ENVIRONMENT: 'sandbox' // Change to 'production' for live
         },
         STRIPE: {
-            PUBLISHABLE_KEY: 'pk_test_51234567890abcdef', // Replace with your Stripe publishable key
+            PUBLISHABLE_KEY: 'pk_test_51RwmiD0c1wmIQqGn5yt1it5yNgesqyd5APNSeePCcALpBf4eWTNrd3HreQ3UJYKHmGbYEr9DK7Q3KcBDulJ0BKwa00HPweCuIw', // User's real Stripe test publishable key
             CURRENCY: 'usd'
         }
     },
@@ -539,10 +539,32 @@ const PaymentManager = {
                                     <input type="text" id="customer-name" name="name" placeholder="John Doe" required>
                                 </div>
                                 <div class="form-group">
+                                    <label for="customer-phone">Phone Number *</label>
+                                    <input type="tel" id="customer-phone" name="phone" placeholder="e.g. +92-300-1234567" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="customer-address-street">Street Address *</label>
+                                    <input type="text" id="customer-address-street" name="address-street" placeholder="Street Address" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="customer-address-city">City *</label>
+                                    <input type="text" id="customer-address-city" name="address-city" placeholder="City" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="customer-address-state">State/Province *</label>
+                                    <input type="text" id="customer-address-state" name="address-state" placeholder="State/Province" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="customer-address-postal">Postal Code *</label>
+                                    <input type="text" id="customer-address-postal" name="address-postal" placeholder="Postal Code" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="customer-address-country">Country *</label>
+                                    <input type="text" id="customer-address-country" name="address-country" placeholder="Country" required>
+                                </div>
+                                <div class="form-group">
                                     <label for="stripe-card-element">Card Information *</label>
-                                    <div id="stripe-card-element" class="stripe-element">
-                                        <!-- Stripe Elements will create form elements here -->
-                                    </div>
+                                    <div id="stripe-card-element" class="stripe-element"></div>
                                     <div id="stripe-card-errors" class="stripe-errors" role="alert"></div>
                                 </div>
                                 <button type="submit" id="stripe-submit" class="btn btn-primary payment-submit-btn">
@@ -888,11 +910,23 @@ const PaymentManager = {
 
         const form = Utils.querySelector('#stripe-payment-form');
         const formData = new FormData(form);
+        const customerInfo = {
+            name: formData.get('name'),
+            email: formData.get('email'),
+            phone: formData.get('phone'),
+            address: {
+                street: formData.get('address-street'),
+                city: formData.get('address-city'),
+                state: formData.get('address-state'),
+                postalCode: formData.get('address-postal'),
+                country: formData.get('address-country')
+            }
+        };
 
         try {
             const { token, error } = await this.stripe.createToken(this.cardElement, {
-                name: formData.get('name'),
-                email: formData.get('email')
+                name: customerInfo.name,
+                email: customerInfo.email
             });
 
             if (error) {
@@ -900,7 +934,7 @@ const PaymentManager = {
             }
 
             // Simulate payment processing (in real implementation, send to your server)
-            await this.simulateStripePayment(token);
+            await this.simulateStripePayment(token, customerInfo);
 
         } catch (error) {
             console.error('Stripe payment error:', error);
@@ -916,7 +950,7 @@ const PaymentManager = {
     /**
      * Simulate Stripe payment processing
      */
-    async simulateStripePayment(token) {
+    async simulateStripePayment(token, customerInfo) {
         return new Promise((resolve, reject) => {
             setTimeout(() => {
                 // Simulate successful payment
@@ -932,7 +966,7 @@ const PaymentManager = {
                     }
                 };
 
-                this.handlePaymentSuccess('stripe', paymentDetails);
+                this.handlePaymentSuccess('stripe', paymentDetails, customerInfo);
                 resolve(paymentDetails);
             }, 2000);
         });
@@ -941,10 +975,21 @@ const PaymentManager = {
     /**
      * Handle successful payment
      */
-    handlePaymentSuccess(method, paymentDetails) {
+    handlePaymentSuccess(method, paymentDetails, customerInfo) {
         try {
             // Create order
-            const order = this.createOrder(method, paymentDetails);
+            const order = this.createOrder(method, paymentDetails, customerInfo);
+
+            // Save order to Firebase
+                    if (window.firebaseDatabase && typeof window.firebaseDatabase.saveOrder === 'function') {
+            window.firebaseDatabase.saveOrder(order).then((id) => {
+                    console.log('Order saved to Firebase with ID:', id);
+                }).catch((err) => {
+                    console.error('Failed to save order to Firebase:', err);
+                });
+            } else {
+                console.warn('FirebaseDB not available, order not saved to Firestore');
+            }
 
             // Notify admin dashboard if open
             this.notifyAdminDashboard(order);
@@ -1002,10 +1047,11 @@ const PaymentManager = {
     /**
      * Create order from payment
      */
-    createOrder(paymentMethod, paymentDetails) {
+    createOrder(paymentMethod, paymentDetails, customerInfo) {
         const order = {
             orderId: 'SP-' + Date.now(),
             customerId: CartManager.cart.customerId,
+            customerInfo: customerInfo,
             items: [...CartManager.cart.items],
             payment: {
                 method: paymentMethod,
@@ -1021,19 +1067,10 @@ const PaymentManager = {
                 total: CartManager.cart.total
             },
             status: 'confirmed',
-            createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
         };
 
-        // Save order to localStorage
-        try {
-            const orders = JSON.parse(localStorage.getItem('shoepoint_orders') || '[]');
-            orders.push(order);
-            localStorage.setItem('shoepoint_orders', JSON.stringify(orders));
-        } catch (error) {
-            console.error('Failed to save order:', error);
-        }
-
+        // Only save to Firebase, not localStorage (prevents duplicates)
         return order;
     },
 
